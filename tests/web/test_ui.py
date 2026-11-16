@@ -472,12 +472,11 @@ def test_sqlite_is_always_warm(anon):
     assert dbwarm.is_warm() and anon.get("/dbstatus").json() == {"warm": True}
 
 
-def test_footer_name_is_a_mailto_link_and_the_landing_says_what_the_site_is_for(anon):
+def test_footer_name_links_to_the_homepage_and_the_landing_says_what_the_site_is_for(anon):
     import config
 
     html = anon.get("/").text
-    assert 'class="contact-link" href="mailto:' in html.split("<footer")[1]
-    assert ">VojtaH</a>" in html.split("<footer")[1]
+    assert '<a href="https://vojtah.cz" rel="noopener">VojtaH</a>' in html.split("<footer")[1]
     assert "agregaci" in html and "kamarády nebo trenéry" in html
     en = anon.get("/", headers={"Accept-Language": "en"}).text
     assert "share them with friends or trainers" in en

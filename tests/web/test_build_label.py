@@ -28,3 +28,8 @@ def test_footer_links_to_the_public_repository(anon):
         '<a href="https://github.com/vojtechherrmann/inbody-aggregator" rel="noopener">GitHub</a>'
         in page
     )
+
+
+def test_footer_name_links_to_the_homepage(anon):
+    page = anon.get("/").text
+    assert '<a href="https://vojtah.cz" rel="noopener">VojtaH</a>' in page

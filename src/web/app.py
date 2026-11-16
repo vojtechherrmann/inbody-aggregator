@@ -104,6 +104,7 @@ app = FastAPI(
 templates = Jinja2Templates(directory=str(HERE / "templates"))
 templates.env.globals["current_year"] = lambda: datetime.now().year
 templates.env.globals["github_url"] = config.GITHUB_URL
+templates.env.globals["homepage_url"] = config.HOMEPAGE_URL
 templates.env.globals["build_label"] = lambda: config.BUILD_LABEL  # footer: commit · revision
 # every CSS/JS URL carries the build, so a deploy is never mixed with stale cached assets
 templates.env.globals["static_url"] = lambda path: f"/static/{path}?v={config.APP_VERSION[:12]}"
