@@ -49,7 +49,9 @@ import security  # noqa: E402
 from sheetpkg import CSV_PARSER_VERSION, SHEET_PARSER_VERSION, validate  # noqa: E402
 from sqlalchemy import delete, or_, select, update  # noqa: E402
 
-_NS = uuid.UUID("0b6f2f0e-5a44-4c52-9e0d-6f2c1d7a9b31")  # deterministic ids: same set every run
+# Deterministic ids: the same set on every run. They also depend on the guest id, so a renamed
+# guest never collides with the rows of the old one.
+_NS = uuid.UUID("0b6f2f0e-5a44-4c52-9e0d-6f2c1d7a9b31")
 _GENERATOR = REPO / "docs" / "prototype" / "build_example.py"
 _SHEET_KEYS = ("measured_date", "measured_time", "origin", "id", "gym")
 
@@ -122,7 +124,7 @@ def file_groups(rows: list[dict]) -> list[dict]:
             g["source"], ("png", "inbody-app")
         )
         g.update(
-            id=str(uuid.uuid5(_NS, f"upload:{n}")),
+            id=str(uuid.uuid5(_NS, f"upload:{config.GUEST_USER_ID}:{n}")),
             kind=kind,
             name=f"{stem}-{last}.{kind}",
             gym=g["recs"][0]["gym"],
