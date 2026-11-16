@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% block title %}{{ t("admin.title") }} &middot; {{ t("app.name") }}{% endblock %}
+{% block content %}
+<h1>{{ t("admin.title") }}</h1>
+<p><a href="/admin/review" role="button" class="secondary">{{ t("review.title") }}</a></p>
+<p>{{ t("admin.spend_month", spent="%.2f" | format(month_usd), budget="%.2f" | format(month_budget)) }}</p>
+
+<h2>{{ t("admin.users") }}</h2>
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th>ID</th><th>{{ t("admin.role") }}</th><th>{{ t("admin.state") }}</th><th>{{ t("admin.last_login") }}</th>
+    <th>{{ t("admin.failed") }}</th><th>{{ t("admin.today") }}</th><th></th></tr></thead>
+  <tbody>
+  {% for u in users %}
+    <tr>
+      <td>{{ u.id }}</td>
+      <td>{{ t("admin.admin") if u.is_admin else "" }}</td>
+      <td>{{ t("admin.disabled") if u.is_disabled else (t("admin.locked") if u.locked_until else t("admin.active")) }}</td>
+      <td>{{ u.last_login_at.strftime("%Y-%m-%d %H:%M") if u.last_login_at else "—" }}</td>
+      <td>{{ u.failed_login_count }}</td>
+      <td>${{ "%.2f" | format(quota_left[u.id][0]) }} / ${{ "%.2f" | format(user_quota) }}{% if quota_left[u.id][1] %} + ${{ "%.2f" | format(quota_left[u.id][1]) }} {{ t("admin.extra") }}{% endif %}</td>
+      <td><a href="/history?subject={{ u.id | urlencode }}">{{ t("admin.view") }}</a></td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+
+<h2>{{ t("admin.recent_uploads") }}</h2>
+<div class="overflow-auto">
+<table class="striped">
+  <thead><tr><th>{{ t("uploads.when") }}</th><th>ID</th><th>{{ t("uploads.file") }}</th><th>{{ t("uploads.status") }}</th></tr></thead>
+  <tbody>
+  {% for u in recent %}
+    <tr><td>{{ u.created_at.strftime("%Y-%m-%d %H:%M") }}</td><td>{{ u.user_id }}</td>
+      <td><a href="/files/{{ u.id }}">{{ u.original_name }}</a></td>
+      <td>{{ t("status.deleted") if u.deleted else t("status." ~ u.status) }}{% if u.error %} <small class="muted">({{ u.error }})</small>{% endif %}</td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<p class="muted small">{{ t("admin.cli_hint") }}</p>
+{% endblock %}

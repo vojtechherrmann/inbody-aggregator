@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ t("review.title") }} &middot; {{ t("app.name") }}{% endblock %}
+{% block content %}
+<h1>{{ t("review.title") }}</h1>
+{% if rows %}
+<table class="striped">
+  <thead><tr><th>{{ t("uploads.when") }}</th><th>ID</th><th>{{ t("uploads.file") }}</th><th>{{ t("review.reason") }}</th></tr></thead>
+  <tbody>
+  {% for u in rows %}
+    <tr><td>{{ u.created_at.strftime("%Y-%m-%d %H:%M") }}</td><td>{{ u.user_id }}</td>
+      <td><a href="/admin/review/{{ u.id }}">{{ u.original_name }}</a></td><td><code>{{ u.error }}</code></td></tr>
+  {% endfor %}
+  </tbody>
+</table>
+{% else %}<p class="muted">{{ t("review.empty") }}</p>{% endif %}
+{% endblock %}

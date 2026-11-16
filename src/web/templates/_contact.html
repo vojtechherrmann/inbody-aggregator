@@ -1,0 +1,6 @@
+{# Contact Vojta on the report of an upload; `prominent` for failed / skipped_budget / partial / needs_review.
+   Needs `u` (the upload). A used-up limit asks about more usage, everything else is an upload problem. #}
+{% set contact = contact_text("contact.text", "extra" if u.status == "skipped_budget" else "upload", id=u.id) %}
+{% if contact %}
+<p class="contact{% if prominent %} prominent{% endif %}">{{ contact }}</p>
+{% endif %}

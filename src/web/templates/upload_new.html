@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ t("up.title") }} &middot; {{ t("app.name") }}{% endblock %}
+{% block content %}
+<h1>{{ t("up.title") }}</h1>
+{% if notice %}<p class="notice" role="status">{{ t(notice) }}</p>{% endif %}
+<section class="card">
+  <form id="upload-form" class="upload-form" method="post" action="/upload" enctype="multipart/form-data">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label>{{ t("up.file") }}
+      <input type="file" name="file" required accept=".pdf,.jpg,.jpeg,.png,.csv,application/pdf,image/jpeg,image/png,text/csv">
+    </label>
+    <label>{{ t("up.gym") }}
+      <input name="source_name" maxlength="128" value="{{ last_source }}" placeholder="{{ t('upload.source_placeholder') }}">
+      <small class="muted">{{ t("up.gym_hint") }}</small>
+    </label>
+    <small class="muted">{{ t("upload.hint", max_mb=max_mb, per_day=per_day) }}</small>
+    <div><button type="submit" class="primary">{{ t("upload.submit") }}</button></div>
+  </form>
+  <div id="upload-progress" hidden>{% include "_progress.html" %}</div>
+  <div id="upload-result"></div>
+  {% include "_csv_tip.html" %}
+</section>
+
+<h2>{{ t("up.mine") }}</h2>
+{% include "_uploads.html" %}
+{% endblock %}
+{% block scripts %}<script src="{{ static_url('upload.js') }}" defer></script>{% endblock %}

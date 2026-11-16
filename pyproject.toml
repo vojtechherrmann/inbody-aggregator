@@ -1,0 +1,52 @@
+[project]
+name = "inbody-aggregator"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.30",
+    "jinja2>=3.1",
+    "python-multipart>=0.0.20",   # form + file upload parsing (Starlette)
+    "itsdangerous>=2.2",          # signed session / CSRF cookies
+    "argon2-cffi>=25.1",          # Argon2id password hashes (PHC strings)
+    "sqlalchemy>=2.0",            # one query layer over SQLite (tests/local) and Azure SQL
+    "pyodbc>=5.2",                # Azure SQL driver (ODBC Driver 18 in the image)
+    "azure-identity>=1.21",       # managed identity (Azure) / az CLI (local) tokens
+    "azure-storage-blob>=12.24",
+    "anthropic>=2.0",             # PDF result-sheet extraction (claude-opus-5-5)
+    "python-dotenv>=1.0",         # optional local .env
+]
+
+# No [build-system]: this is an application, not a library. The image installs the dependency
+# list straight from this file (`uv pip install --system -r pyproject.toml`) and copies the code
+# flat into /app, the same shape as the monorepo's webs.
+[tool.uv]
+package = false
+# Supply-chain hygiene: resolve only releases that have been public for >= 2 weeks (several
+# dependencies shipped new versions on the day this was set up). Move the date forward
+# deliberately when upgrading: edit, `uv lock --upgrade`, run the tests.
+exclude-newer = "2026-11-02T00:00:00Z"
+
+[dependency-groups]
+# httpx is what fastapi.testclient.TestClient drives. Starlette now nudges towards `httpx2`, but
+# its newest release was hours old when this was set up (2026-11-16); revisit it later.
+dev = ["pre-commit", "pytest>=8.0", "httpx>=0.27", "ruff==0.15.15"]
+
+[tool.pytest.ini_options]
+# Tests live under top-level tests/ (mirrors src layout). The web's dir goes on the path so tests
+# import `app` exactly the way the container does (WORKDIR /app, flat).
+pythonpath = ["src/web", "tests/web"]
+testpaths = ["tests"]
+addopts = "-q --import-mode=importlib"
+filterwarnings = ["ignore:Using `httpx` with `starlette.testclient` is deprecated"]
+
+[tool.ruff]
+line-length = 100
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+]

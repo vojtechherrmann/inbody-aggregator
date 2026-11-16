@@ -1,0 +1,66 @@
+{# The stored result report of one upload (upload.report_json). Needs `u`, `report`. #}
+{% set r = report or {} %}
+{% set counts = r.get("counts", {}) %}
+{% set prominent = u.status in ("failed", "skipped_budget", "partial", "needs_review") %}
+
+{% if u.deleted %}
+  <p class="notice warn">{{ t("report.deleted") }}</p>
+{% elif u.status == "duplicate_file" %}
+  <p class="notice">{{ t("report.duplicate", date=r.get("duplicate_of", {}).get("created_at", "?")) }}
+  {% if duplicate_of %}<a href="/uploads/{{ duplicate_of.id }}">{{ t("report.show_earlier") }}</a>{% endif %}</p>
+{% elif u.status == "needs_review" %}
+  <p class="notice warn">{{ t("report.needs_review") }} <strong>{{ t("report.notified") }}</strong></p>
+{% elif u.status == "failed" %}
+  {# only the localized message for the error code -- never the raw (English) exception text #}
+  {% set fk = "failcode." ~ (u.error_code or "") %}
+  <p class="notice error">{{ t("report.failed") }}{% if t(fk) != fk %} {{ t(fk) }}{% endif %}
+  <br><strong>{{ t("report.notified") }}</strong></p>
+{% elif u.status == "skipped_budget" %}
+  <p class="notice warn">{{ t("report.budget") }} <strong>{{ t("report.notified") }}</strong></p>
+{% elif u.status == "nothing_new" %}
+  <p class="notice">{{ t("report.nothing_new") }}</p>
+{% endif %}
+
+{% if u.status in ("done", "partial", "nothing_new") %}
+<section class="report">
+  <h3>{{ t("report.found") }}</h3>
+  <p>{{ t("report.found_summary", n=counts.get("total", 0), kind=t("kind." ~ u.kind)) }}
+     {% if r.get("device") %}&middot; {{ t("report.device") }}: {{ r.device }}{% endif %}
+     {% if r.get("location") %}&middot; {{ t("report.location") }}: {{ r.location }}{% endif %}</p>
+  <p class="muted small">{{ t("report.outcomes", accepted=counts.get("accepted", 0), rejected=counts.get("rejected", 0)) }}</p>
+
+  {% for m in r.get("measurements", []) %}
+  <article class="m-report">
+    <header>
+      <strong>{{ m.date }}</strong>{% if m.time %} <small class="muted">{{ m.time }}</small>{% endif %}
+      &middot; <span class="outcome o-{{ m.outcome }}">{{ t("outcome." ~ m.outcome) }}</span>
+      {% if m.from_history %}&middot; <small>{{ t("report.history_point") }}</small>{% endif %}
+    </header>
+    {% if m.outcome == "rejected" %}
+      <p class="small">
+      {% if m.reason == "same_day_in_file" %}{{ t("reason.same_day_in_file") }}
+      {% elif m.reason == "deleted" %}{{ t("reason.deleted") }}
+      {% elif m.conflict %}{{ t("reason.day_exists") }}
+        <a href="/uploads/{{ m.conflict.upload_id }}">{{ m.conflict.name }}</a> ({{ t("origin." ~ m.conflict.origin) }}, {{ m.conflict.date }})
+      {% else %}{{ t("reason.day_exists") }}{% endif %}
+      </p>
+    {% endif %}
+    <p><span class="muted">{{ t("report.filled") }}:</span>
+      {% for g in m.filled %}{{ t("group." ~ g) }}{% if not loop.last %}, {% endif %}{% else %}—{% endfor %}</p>
+    {% if m.missing_core or m.invalid %}
+      <p><span class="muted">{{ t("report.missing") }}:</span>
+        {% for f in m.missing_core %}{{ field_label(t, f) }}{% if not loop.last %}, {% endif %}{% endfor %}
+        {% if m.invalid %}<br>{% for f in m.invalid %}{{ t("report.unreadable", field=field_label(t, f)) }}{% if not loop.last %}; {% endif %}{% endfor %}{% endif %}
+      </p>
+    {% endif %}
+    {% if m.errors %}
+      <p><span class="muted">{{ t("report.errors") }}:</span></p>
+      <ul class="small">{% for e in m.errors %}<li>{{ e }}</li>{% endfor %}</ul>
+    {% endif %}
+  </article>
+  {% endfor %}
+</section>
+{% endif %}
+
+{% if u.kind != "csv" or u.error_code == "not_inbody" %}{% include "_csv_tip.html" %}{% endif %}
+{% include "_contact.html" %}

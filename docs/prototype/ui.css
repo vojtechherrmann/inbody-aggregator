@@ -1,0 +1,303 @@
+/* self-hosted faces, all SIL OFL 1.1 (static/fonts/OFL-*.txt): Saira = the brand and the margin quotes,
+   Playfair only the quote mark. latin + latin-ext (Czech) share one family via unicode-range. */
+@font-face { font-family: "Saira"; font-style: normal; font-weight: 100 900; font-display: swap;
+  src: url("saira-latin-wght-normal.woff2") format("woff2"); }
+@font-face { font-family: "Playfair Display"; font-style: italic; font-weight: 500; font-display: swap;
+  src: url("playfair-display-latin-500-italic.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Playfair Display"; font-style: italic; font-weight: 500; font-display: swap;
+  src: url("playfair-display-latin-ext-500-italic.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+/* InBody Aggregator shell + report. Layout: app bar (name, viewing-as, upload, language, log out),
+   tabs Report | History, one content column max 1120px. System font only: the real app runs
+   under a strict CSP with no third-party font host, so the prototype matches it. */
+:root {
+  --brand-red: #90001f;   /* the InBody wordmark red (rgb 144, 0, 31) */
+  --rb-text-w: 138px;
+  --page: #f5f4f0;
+  --card: #ffffff;
+  --chip: #efeee9;
+  --ink: #161614;
+  --ink-2: #4f4e4a;
+  --muted: #6b6a64;
+  --axis-text: #75736d;
+  --grid: #e7e6e0;
+  --axis: #c9c8bf;
+  --ring: rgba(22,22,20,0.11);
+  --band: rgba(22,22,20,0.045);
+  --focus: #2a78d6;
+  --s1: #2a78d6;   /* muscle, arms, single metrics */
+  --s2: #eb6834;   /* fat, legs */
+  --s3: #1baf7a;   /* other lean mass, trunk */
+  --ctx: #b4b2aa;  /* neutral: weight-only bar */
+  --good: #006300;
+  --bad: #c0392b;
+  --critical: #d03b3b;   /* status critical: destructive actions */
+  --warn-text: #8a5a00;  /* status warning as text (AA on white) */
+  --primary: #161614;
+  --on-primary: #ffffff;
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+/* DEFAULT = dark (theme.js / app.js set <html data-theme="dark"> unless the user chose light or system);
+   the dark tokens exist twice with identical bodies: once for the OS preference (system), once explicit. */
+:root[data-theme="light"] { color-scheme: light; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --page: #0f0f0e; --card: #1a1a19; --chip: #262624; --ink: #f0efec; --ink-2: #c8c7bf; --muted: #9c9b93;
+    --axis-text: #9a9890; --grid: #2c2c2a; --axis: #46453f; --ring: rgba(255,255,255,0.10); --band: rgba(255,255,255,0.05);
+    --focus: #5598e7; --s1: #3987e5; --s2: #d95926; --s3: #199e70; --ctx: #5e5d58;
+    --good: #2fb52f; --bad: #f08a84; --critical: #e5534f; --warn-text: #e3a33c; --primary: #f0efec; --on-primary: #161614; --brand-red: #ff2a55; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --page: #0f0f0e; --card: #1a1a19; --chip: #262624; --ink: #f0efec; --ink-2: #c8c7bf; --muted: #9c9b93;
+  --axis-text: #9a9890; --grid: #2c2c2a; --axis: #46453f; --ring: rgba(255,255,255,0.10); --band: rgba(255,255,255,0.05);
+  --focus: #5598e7; --s1: #3987e5; --s2: #d95926; --s3: #199e70; --ctx: #5e5d58;
+  --good: #2fb52f; --bad: #f08a84; --critical: #e5534f; --warn-text: #e3a33c; --primary: #f0efec; --on-primary: #161614; --brand-red: #ff2a55; color-scheme: dark;
+}
+[hidden] { display: none !important; }
+* { box-sizing: border-box; }
+body { background: var(--page); color: var(--ink); font: 14px/1.5 var(--font); margin: 0; }
+button, select, input { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+.band { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.inner { max-width: 1120px; margin: 0 auto; }
+
+/* app bar */
+.appbar { background: var(--card); border-bottom: 1px solid var(--ring); padding-block: 10px; }
+.appbar .inner { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; }
+.brand { display: inline-flex; align-items: baseline; gap: .25em; white-space: nowrap; text-decoration: none; font-family: "Saira", "Arial Narrow", system-ui, sans-serif; font-size: 21px; line-height: 1.1; letter-spacing: -0.005em; color: var(--brand-red); }
+/* the whole brand is TEXT in one typeface and one colour: "InBody" bold, "Aggregator" lighter. The red
+   is the InBody wordmark's own (rgb(144, 0, 31)); in dark mode the token is brightened so both
+   runs stay legible and identical. */
+.brand b { font-weight: 800; }
+.brand span { font-weight: 500; }
+/* whose data am I looking at: the first thing in the tab row (its own row on phones) */
+.tabrow { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px 20px; border-bottom: 1px solid var(--ring); margin-top: 16px; }
+.tabrow .tabs { border-bottom: 0; margin-top: 0; }
+
+/* ---- frozen top block (like frozen panes): on a roomy screen (wider than 760 px AND at least 640 px
+   tall) the app bar, the tab row and, on History, the filter row (charts.css) stay pinned while the
+   page scrolls; on phones and short screens nothing is pinned. Heights are fixed on purpose so the
+   three offsets stack without JS. Banners (guest / prototype) stay in the flow and scroll away. */
+@media (min-width: 761px) and (min-height: 640px) {
+  :root { --bar-h: 56px; --tab-h: 47px; --ibc-pin-top: calc(var(--bar-h) + var(--tab-h)); }
+  html { scroll-padding-top: calc(var(--ibc-pin-top) + 12px); }
+  html:has(.ibc-filters) { scroll-padding-top: calc(var(--ibc-pin-top) + 64px); }
+  .appbar { position: sticky; top: 0; z-index: 30; box-sizing: border-box; padding-block: 0; }
+  .appbar > .inner:first-child { height: calc(var(--bar-h) - 1px); flex-wrap: nowrap; }
+  /* each pinned row tucks 2 px under the one above (its own padding fills the overlap, the upper row is on top) so
+     no sub-pixel gap can show content scrolling underneath, whatever the zoom or device pixel ratio */
+  .tabrow { position: sticky; top: calc(var(--bar-h) - 2px); z-index: 29; box-sizing: border-box; height: calc(var(--tab-h) + 2px); padding-top: 2px; background: var(--page); }
+}
+@media (min-width: 761px) and (min-height: 640px) {
+  .appbar > .inner + .inner { position: relative; height: 0; }   /* the prototype's upload hint floats under the bar */
+  .appbar .pop { position: absolute; right: 0; top: 0; margin: 8px 0 0; width: min(380px, 100%); z-index: 31; box-shadow: 0 8px 28px rgba(0,0,0,.16); }
+}
+.who { display: flex; align-items: center; margin: 0 0 6px; min-width: 0; }
+.who select { font-size: 15px; font-weight: 600; color: var(--ink); background-color: var(--card); border: 1.5px solid var(--ink-2); border-radius: 8px; padding: 7px 34px 7px 12px; max-width: 100%; min-width: 0; }
+.who-static { font-size: 15px; font-weight: 600; color: var(--ink); padding: 7px 4px; }
+@media (max-width: 640px) { .who { flex: 1 1 100%; margin-bottom: 0; } .who select { width: 100%; } }
+.grow { flex: 1; }
+.actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.btn-primary { display: inline-flex; align-items: center; gap: 7px; background: var(--primary); color: var(--on-primary); border: 0; border-radius: 8px; padding: 7px 14px; font-weight: 600; cursor: pointer; }
+.btn-primary svg { stroke: currentColor; }
+.btn-primary:disabled { opacity: .4; cursor: not-allowed; }
+.btn-quiet { display: inline-flex; align-items: center; gap: 7px; background: var(--card); color: var(--ink); border: 1px solid var(--axis); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+.btn-quiet[aria-expanded="true"] { background: var(--chip); }
+.settings { position: relative; }
+.settings-panel { position: absolute; right: 0; top: calc(100% + 8px); z-index: 30; width: min(300px, calc(100vw - 32px)); min-width: min(260px, calc(100vw - 32px)); background: var(--card); border: 1px solid var(--ring); border-radius: 10px; box-shadow: 0 10px 32px rgba(0,0,0,.18); padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+.settings-panel fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.settings-panel legend { font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); padding: 0; margin-bottom: 4px; }
+.settings-panel label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.settings-panel .set-inline { flex-wrap: nowrap; white-space: nowrap; gap: 6px; }
+.settings-panel input[type="number"] { width: calc(3.5ch + 14px); padding: 4px 6px; border: 1px solid var(--axis); border-radius: 6px; background: var(--card); text-align: right; font-variant-numeric: tabular-nums; }
+.set-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+.set-hint { margin: 0; font-size: 12px; color: var(--muted); }
+/* prototype-only dev notes: visibly different so nobody copies them into the app */
+[data-prototype-only] { font-style: italic; border-top: 1px dashed var(--axis); padding-top: 6px; }
+
+/* destructive icon button + in-page confirmation + undo toast */
+.icon-danger { display: inline-grid; place-items: center; width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--axis); background: var(--card); color: var(--critical); cursor: pointer; padding: 0; }
+.icon-danger:hover { background: color-mix(in srgb, var(--critical) 10%, var(--card)); border-color: var(--critical); }
+.confirm { border: 1px solid var(--critical); background: color-mix(in srgb, var(--critical) 7%, var(--card)); border-radius: 10px; padding: 12px 14px; margin: 4px 0 14px; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+.confirm p { margin: 0; flex: 1 1 260px; color: var(--ink); }
+.confirm .btns { display: flex; gap: 8px; }
+.btn-danger { background: #c4302f; color: #ffffff; border: 0; border-radius: 8px; padding: 7px 14px; font-weight: 600; cursor: pointer; }
+.toast { position: fixed; z-index: 40; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--card); border-radius: 10px; padding: 10px 14px; display: flex; align-items: center; gap: 14px; box-shadow: 0 8px 28px rgba(0,0,0,.25); max-width: calc(100vw - 32px); }
+.toast button { background: none; border: 0; color: inherit; font-weight: 700; text-decoration: underline; cursor: pointer; padding: 0; }
+.ghost { background: none; border: 0; color: var(--ink-2); cursor: pointer; padding: 6px 2px; }
+.pop { margin-top: 10px; background: var(--chip); border-radius: 8px; padding: 10px 12px; color: var(--ink-2); font-size: 13px; }
+
+
+/* ---- "not optimised for mobile" strip: calm, only at the mobile width (<= 760 px, the breakpoint of the
+   1-column cards and of the frozen top block), not pinned, dismissable (shell.js remembers it) */
+.mobile-notice { display: none; background: var(--chip); color: var(--ink-2); border-bottom: 1px solid var(--ring); font-size: 13px; line-height: 1.4; padding-block: 6px; }
+.mobile-notice .inner { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.mobile-notice-x { flex: none; width: 32px; height: 32px; margin: -4px -6px -4px 0; display: inline-flex; align-items: center; justify-content: center; background: none; border: 0; border-radius: 8px; color: var(--ink-2); font-size: 16px; line-height: 1; cursor: pointer; }
+.mobile-notice-x:hover { background: var(--grid); }
+html:not(.js) .mobile-notice-x { display: none; }
+@media (max-width: 760px) { .mobile-notice { display: block; } }
+html.notice-off .mobile-notice { display: none; }
+.banner { background: var(--chip); color: var(--ink-2); font-size: 13px; padding-block: 7px; }
+.banner.local { background: color-mix(in srgb, var(--s3) 14%, var(--card)); }
+.banner-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; }
+.dev-switch[data-prototype-only] { border-top: 0; padding-top: 0; display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.dev-switch button { background: none; border: 1px dashed var(--axis); border-radius: 6px; padding: 1px 7px; font-size: 12px; color: var(--ink-2); cursor: pointer; font-style: normal; }
+.dev-switch button[aria-pressed="true"] { border-style: solid; border-color: var(--ink-2); color: var(--ink); font-weight: 600; }
+.notice { background: var(--card); border: 1px solid var(--ring); border-radius: 8px; padding: 9px 12px; color: var(--ink-2); font-size: 13px; margin-bottom: 14px; }
+
+.tabs { display: flex; gap: 2px; }
+.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 10px 14px; cursor: pointer; color: var(--ink-2); font-weight: 500; font-size: 15px; }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--ink); font-weight: 600; }
+main { padding-block: 18px 40px; }
+.site-footer { padding-block: 16px 28px; text-align: center; color: var(--muted); font-size: 12px; }
+
+/* report */
+.rep-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 20px; margin-bottom: 6px; }
+.rep-head h1 { margin: 0; font-size: 24px; font-weight: 650; letter-spacing: -0.01em; text-wrap: balance; }
+.rep-head h1 small { font-size: 15px; font-weight: 500; color: var(--muted); margin-left: 8px; }
+.stepper { display: flex; align-items: center; gap: 6px; }
+.stepper button { width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--axis); background: var(--card); cursor: pointer; font-size: 18px; line-height: 1; }
+.stepper button:disabled { opacity: .35; cursor: default; }
+.stepper select { background-color: var(--card); border: 1px solid var(--axis); border-radius: 8px; padding: 6px 32px 6px 10px; max-width: 62vw; }
+.rep-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; color: var(--muted); font-size: 13px; margin-bottom: 16px; }
+.rep-compare { margin-left: auto; text-align: right; }   /* lines up with the change column */
+.chip { display: inline-block; font-size: 12px; padding: 2px 9px; border-radius: 999px; background: var(--chip); color: var(--ink-2); }
+.chip.latest { background: var(--ink); color: var(--card); }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--focus); text-decoration: underline; cursor: pointer; font-size: 13px; }
+
+.tiles { display: grid; gap: 12px; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 14px; }
+@media (max-width: 760px) { .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.tile { background: var(--card); border: 1px solid var(--ring); border-radius: 10px; padding: 12px 14px; min-width: 0; }
+.tile .lbl { color: var(--ink-2); font-size: 13px; }
+.tile .val { font-size: 28px; font-weight: 650; line-height: 1.25; letter-spacing: -0.01em; }
+.tile .val small { font-size: 14px; font-weight: 500; color: var(--ink-2); margin-left: 3px; }
+.tile .delta { font-size: 12px; }
+
+/* the four section cards: an explicit 2 x 2 grid, one column below a single breakpoint (never 3);
+   cards in a row stretch to the same height. The segmental card spans both columns. */
+.rep-grid { display: grid; gap: 14px; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+@media (max-width: 760px) { .rep-grid { grid-template-columns: minmax(0, 1fr); } }
+.rcard { background: var(--card); border: 1px solid var(--ring); border-radius: 10px; padding: 14px 16px; min-width: 0; container-type: inline-size; }
+.rcard.wide { grid-column: 1 / -1; }
+.rcard-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 10px; }
+.rcard .rcard-head h2 { margin: 0; }
+.rcard h2 { margin: 0 0 10px; font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+/* every metric row has the same structure in every card, at every width:
+   row 1 = name (left) | value (right); row 2 = status pill (left) | change (right); then the bar */
+.kv { display: flex; flex-direction: column; gap: 0; }
+.kvrow { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 14px; row-gap: 3px; align-items: baseline; }
+.kvrow { padding: 12px 0; border-top: 1px solid var(--ring); }   /* hairline between the metrics */
+.kvrow:first-child { border-top: 0; padding-top: 2px; }
+.kvrow:last-child { padding-bottom: 0; }
+.kvrow .k-name { font-weight: 650; color: var(--ink); min-width: 0; }
+.kvrow .v { font-weight: 600; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.kvrow .v.na { color: var(--muted); font-weight: 400; }
+.kvrow .sub { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 18px; }
+.kvrow .sub .eval { margin: 0; }
+.kvrow .sub .d { margin-left: auto; text-align: right; font-size: 12px; min-width: 0; }
+.kvrow .sub .delta { flex-wrap: wrap; justify-content: flex-end; white-space: normal; }
+.kvrow .bar { grid-column: 1 / -1; margin: 5px 0 0; }   /* + the sub row's 3 px gap = ~8 px between pill and bar */
+
+/* evaluation pill: one component for every evaluation in the report (icon + text, tinted, fully rounded) */
+.eval { --tone: var(--muted); display: inline-flex; align-items: center; gap: 3px; width: fit-content; font-size: 10.5px; line-height: 1.2; font-weight: 500;
+  padding: 0 7px 0 4px; margin: 3px 0 2px; border-radius: 999px; color: var(--tone);
+  background: color-mix(in srgb, var(--tone) 11%, var(--card)); border: 1px solid color-mix(in srgb, var(--tone) 38%, var(--card)); white-space: nowrap; }
+.eval svg { flex: none; width: 10px; height: 10px; }
+.eval.good { --tone: var(--good); }
+.eval.warn { --tone: var(--warn-text); }
+.eval.bad { --tone: var(--bad); }
+.segcell .seg-k { font-weight: 600; color: var(--ink-2); }
+
+
+.delta { display: inline-flex; align-items: center; gap: 4px; font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; }
+.delta svg { flex: none; }
+.delta.good { color: var(--good); }
+.delta.bad { color: var(--bad); }
+.delta.same, .delta.none { color: var(--ink-2); }
+.delta .vs { color: var(--muted); }
+
+/* range bar against the printed normal range */
+.rb { display: grid; grid-template-columns: minmax(0, 1fr) var(--rb-text-w); gap: 2px 10px; align-items: start; font-size: 11px; color: var(--muted); }
+/* the "norma …" text has a FIXED width (fits the longest, "norma 1 588–1 816 kcal"), so it never wraps
+   or shrinks and every range bar gets the same width in every card at a given viewport */
+.rb-text { line-height: 8px; width: var(--rb-text-w); white-space: nowrap; text-align: right; }
+.rb-scale { min-width: 0; }
+.rb-ticks { position: relative; height: 15px; margin-top: 1px; }
+.rb-tick { position: absolute; top: 0; transform: translateX(-50%); padding-top: 4px; font-size: 10px; line-height: 1; color: var(--axis-text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rb-tick::before { content: ""; position: absolute; top: 0; left: 50%; width: 1px; height: 3px; background: var(--axis); }
+.rb-tick.hide { color: transparent; }
+.rb-track { position: relative; height: 8px; border-radius: 999px; background: var(--chip); }
+.rb-band { position: absolute; top: 0; bottom: 0; border-radius: 999px; background: color-mix(in srgb, var(--ink) 16%, transparent); }
+.rb-dot { position: absolute; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: var(--ink); border: 2px solid var(--card); }
+
+/* segmental: laid out like the body figure on the sheet */
+.segmap { display: grid; gap: 10px; grid-template-columns: repeat(3, minmax(0, 1fr)); grid-template-areas: "ra tr la" "rl tr ll"; }
+/* too narrow for the body-figure layout: one column, right arm, left arm, trunk, right leg, left leg */
+@container (max-width: 620px) { .segmap { grid-template-columns: minmax(0, 1fr); grid-template-areas: "ra" "la" "tr" "rl" "ll"; } }
+.segcell { border: 1px solid var(--ring); border-radius: 8px; padding: 9px 11px; min-width: 0; background: var(--card); }
+.segcell h3 { margin: 0 0 6px; font-size: 13px; font-weight: 600; color: var(--ink); }
+.segcell .row { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 4px 8px; font-size: 13px; }
+.segcell .seg-l { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.segcell .seg-r { display: flex; flex-direction: column; align-items: flex-end; margin-left: auto; text-align: right; }
+.segcell .row + .row { margin-top: 10px; }
+.segcell .row span:first-child { color: var(--muted); }
+.segcell .row b { font-variant-numeric: tabular-nums; font-weight: 600; }
+.segcell .row b small { font-weight: 400; color: var(--muted); }
+.segcell .delta { font-size: 12px; }
+.note { color: var(--muted); font-size: 12px; margin: 14px 0 0; }
+.empty { color: var(--muted); padding: 60px 0; text-align: center; }
+
+@media (max-width: 520px) {
+  .rep-head h1 { font-size: 20px; }
+  .tile .val { font-size: 24px; }
+  .appbar .inner { gap: 8px 12px; }
+}
+
+/* sharing panel */
+.share-panel { width: min(340px, calc(100vw - 32px)); gap: 12px; }
+.share-panel h3 { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); }
+.share-panel ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.share-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.share-row .who-name { font-weight: 600; }
+.share-row small { color: var(--muted); margin-left: 6px; font-weight: 400; }
+.share-row .icon-danger { width: 30px; height: 30px; }
+.share-panel .confirm { margin: 0; padding: 10px 12px; }
+.share-form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.share-form label { width: 100%; font-size: 13px; color: var(--ink-2); cursor: default; }
+.share-form input { flex: 1 1 140px; min-width: 0; padding: 6px 8px; border: 1px solid var(--axis); border-radius: 6px; background: var(--card); }
+.share-msg { margin: 0; font-size: 13px; }
+.share-msg.err { color: var(--critical); }
+.share-msg.ok { color: var(--good); }
+.share-owner { background: none; border: 0; padding: 0; color: var(--focus); text-decoration: underline; cursor: pointer; font: inherit; }
+.share-sep { border: 0; border-top: 1px solid var(--grid); margin: 0; width: 100%; }
+
+/* narrow screens: app-bar panels span the bar instead of hanging off their button */
+@media (max-width: 640px) {
+  .appbar .inner { position: relative; }
+  .settings { position: static; }
+  .settings-panel, .share-panel { left: 0; right: 0; width: auto; top: calc(100% + 6px); }
+}
+
+@media (max-width: 520px) { :root { --rb-text-w: 130px; } }
+
+/* ---- quotes in the side margins: decoration only. Each one is centred (both ways) in the free space
+   beside the content column and set as a typographic piece; one look for all.
+   Shown only where a side margin is wide enough (>= 170 px); hidden below, and in print. */
+.quote { display: none; position: fixed; top: 0; bottom: 0; width: calc((100vw - 1152px) / 2); box-sizing: border-box;
+  padding: 0 clamp(18px, 1.6vw, 36px); align-items: center; justify-content: center; pointer-events: none; user-select: none;
+  --qs: clamp(20px, calc((100vw - 1152px) / 18), 30px); --qm: var(--brand-red);
+  font-size: var(--qs); line-height: 1.25; color: var(--ink-2); text-align: center; quotes: "\201C" "\201D"; }
+.quote-l { left: 0; }
+.quote-r { right: 0; }
+.quote p { position: relative; margin: 0; padding-top: 1.55em; max-width: min(15em, 100%); text-wrap: balance; overflow-wrap: anywhere; hyphens: manual; }
+/* the big opening mark sits in the padding above the text (never over it); both languages use the 66-shaped opening mark (U+201C) */
+.quote p::before { content: open-quote; position: absolute; top: -.2em; left: 50%; transform: translateX(-50%); font: italic 500 2.5em/1 "Playfair Display", Georgia, serif; color: var(--qm); text-transform: none; letter-spacing: 0; text-decoration: none; }
+@media (min-width: 1800px) { .quote { display: flex; } }
+@media print { .quote { display: none !important; } }
+
+/* the one look: Saira caps, brand-red bar on the left, the opening mark a little in from the bar */
+.quote p { font-family: "Saira", system-ui, sans-serif; font-weight: 500; font-size: .76em; text-transform: uppercase; letter-spacing: .09em; padding-left: .8em; border-left: 3px solid var(--brand-red); text-align: left; }
+.quote p::before { left: .25em; transform: none; }

@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}{{ u.original_name }} &middot; {{ t("app.name") }}{% endblock %}
+{% block content %}
+{% set own_uploads = is_owner and not is_guest %}
+<p class="small"><a href="{{ '/upload' if own_uploads else '/history?subject=' ~ (u.user_id | urlencode) }}">{% if own_uploads %}{{ t("up.back") }}{% else %}&larr; {{ t("history.title") }}{% endif %}</a></p>
+<h1>{{ u.original_name }}</h1>
+{% set st = "deleted" if u.deleted else u.status %}
+<p class="muted small">{{ t("kind." ~ u.kind) }} &middot; {{ u.created_at.strftime("%Y-%m-%d %H:%M") }} UTC &middot; {{ u.user_id }}
+  {% if final %}<span class="status s-{{ st }}">{{ t("status." ~ st) }}</span>{% endif %}</p>
+<section class="card">
+  {% include "_progress.html" %}
+</section>
+{% include "_upload_live.html" %}
+<p class="up-actions"><a class="btn-primary" href="{{ '/report' if own_uploads else '/report?subject=' ~ (u.user_id | urlencode) }}">{{ t("up.toReport") }}</a></p>
+{% endblock %}
+{% block scripts %}<script src="{{ static_url('progress.js') }}" defer></script>{% endblock %}

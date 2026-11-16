@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}{{ t("review.title") }} &middot; {{ u.original_name }}{% endblock %}
+{% block content %}
+<p><a href="/admin/review">&larr; {{ t("review.title") }}</a></p>
+<h1>{{ u.original_name }}</h1>
+<p class="muted small">{{ u.user_id }} &middot; {{ t("kind." ~ u.kind) }} &middot; {{ u.created_at.strftime("%Y-%m-%d %H:%M") }} UTC
+  &middot; {{ t("uploads.status") }}: {{ t("status.deleted") if u.deleted else t("status." ~ u.status) }} &middot; <a href="/files/{{ u.id }}">{{ t("upload.download") }}</a>
+  &middot; <a href="/uploads/{{ u.id }}">{{ t("review.user_view") }}</a></p>
+
+<h2>{{ t("review.reason") }}</h2>
+<ul>{% for d in review.get("details", []) %}<li><code>{{ d }}</code></li>{% else %}<li>{{ u.error }}</li>{% endfor %}</ul>
+
+<h2>{{ t("review.parsed") }}</h2>
+{% if parsed %}
+<div class="overflow-auto"><table class="small striped">
+  <thead><tr>{% for k in parsed[0].keys() %}<th>{{ k }}</th>{% endfor %}</tr></thead>
+  <tbody>{% for p in parsed %}<tr>{% for v in p.values() %}<td>{{ "—" if v is none else v }}</td>{% endfor %}</tr>{% endfor %}</tbody>
+</table></div>
+{% else %}<p class="muted">—</p>{% endif %}
+{% if llm_json %}<details><summary>{{ t("review.raw_answer") }}</summary><pre class="small">{{ llm_json }}</pre></details>{% endif %}
+
+{% if u.status == "needs_review" %}
+<div class="grid">
+  <form method="post" action="/admin/review/{{ u.id }}/approve">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button type="submit">{{ t("review.approve") }}</button>
+  </form>
+  <form method="post" action="/admin/review/{{ u.id }}/reprocess">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <button type="submit" class="secondary">{{ t("review.reprocess") }}</button>
+  </form>
+</div>
+<form method="post" action="/admin/review/{{ u.id }}/reject">
+  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+  <input name="note" maxlength="500" placeholder="{{ t('review.note') }}">
+  <button type="submit" class="secondary outline">{{ t("review.reject") }}</button>
+</form>
+{% endif %}
+
+<h2>{{ t("review.log") }}</h2>
+<ul class="small">{% for a in actions %}<li>{{ a.created_at.strftime("%Y-%m-%d %H:%M") }} UTC &middot; {{ a.admin_id }} &middot; {{ a.action }}{% if a.note %} &middot; {{ a.note }}{% endif %}</li>{% else %}<li class="muted">—</li>{% endfor %}</ul>
+{% endblock %}

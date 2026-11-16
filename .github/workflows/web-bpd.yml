@@ -1,0 +1,81 @@
+name: web BPD
+
+# Manual full pipeline for the inbody-aggregator website (src/web): container app
+# vhgwc-inbody-web in RG vh-personal, image vhgwccr1.azurecr.io/inbody-web.
+# Stages: lint -> test -> build -> push :latest + :<sha> to ACR -> deploy.
+#
+# Builds src/web/Dockerfile from the repo root (it copies extraction/ too).
+# Webs get -bpd only (monorepo rule: -bp exists only for services an Azure restarter promotes).
+# The FIRST image is built by `az acr build` during provisioning (AZURE.md), so this workflow's
+# deploy stage finds the app already there. Without that, a first run is expected to FAIL at
+# deploy (build+push succeed), then .azure/services/web.ps1, then run it again.
+#
+# BUILDS HEAD: whatever is committed ships. Never deploy an unverified change.
+#
+# Secrets (set by .azure/basics/github-secrets.ps1): AZURE_CREDENTIALS (SP, Contributor on
+# vh-personal only), REGISTRY_USERNAME / REGISTRY_PASSWORD (ACR admin).
+
+on:
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  # LINT -- first stage / gate (reusable workflow). build/deploy run only if this passes.
+  lint:
+    uses: ./.github/workflows/lint.yml
+
+  # TEST -- pytest gate (reusable workflow). build/deploy run only if this passes.
+  test:
+    uses: ./.github/workflows/test.yml
+
+  # BUILD & PUSH -- :latest is what a fresh `web.ps1` creates from; :<sha> is what gets deployed.
+  build:
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to ACR
+        uses: docker/login-action@v4
+        with:
+          registry: vhgwccr1.azurecr.io
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build & Push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./src/web/Dockerfile
+          push: true
+          build-args: |
+            GIT_SHA=${{ github.sha }}
+          tags: |
+            vhgwccr1.azurecr.io/inbody-web:latest
+            vhgwccr1.azurecr.io/inbody-web:${{ github.sha }}
+
+  # DEPLOY -- the immutable :<sha> (new revision = go-live). Pinning the sha, not the floating
+  # :latest, keeps each revision on a distinct image, so re-deploying a previous revision's image
+  # is a real rollback. APP_VERSION feeds /healthz and the page footer.
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy web app
+        uses: azure/cli@v2
+        with:
+          azcliversion: latest
+          inlineScript: |
+            retry() { local n=1; until "$@"; do [ $n -ge 3 ] && { echo "deploy failed after $n attempts"; exit 1; }; echo "attempt $n failed; retry in 30s"; n=$((n+1)); sleep 30; done; }
+            retry az containerapp update \
+              --name vhgwc-inbody-web \
+              --resource-group vh-personal \
+              --image vhgwccr1.azurecr.io/inbody-web:${{ github.sha }} \
+              --set-env-vars APP_VERSION=${{ github.sha }}

@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}{{ t("login.title") }} &middot; {{ t("app.name") }}{% endblock %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ t("login.title") }}</h1>
+  {% if error %}<p class="notice error" role="alert">{{ t(error) }}</p>{% endif %}
+  <form method="post" action="/login" autocomplete="on" class="form-stack">
+    <input type="hidden" name="csrf_token" value="{{ csrf }}">
+    <label>{{ t("login.username") }}
+      <input name="username" autocomplete="username" required maxlength="32" autocapitalize="none" spellcheck="false">
+    </label>
+    <label>{{ t("login.password") }}
+      <input name="password" type="password" autocomplete="current-password" required maxlength="1024">
+    </label>
+    {# Honeypot: visually hidden, skipped by keyboard and assistive tech; bots fill it. #}
+    <div class="hp" aria-hidden="true">
+      <label>Website <input name="website" tabindex="-1" autocomplete="off"></label>
+    </div>
+    <div><button type="submit" class="primary">{{ t("login.submit") }}</button></div>
+  </form>
+  <p class="muted small">{{ contact_text("login.forgot", "forgot") }}</p>
+  <p class="muted small">{{ contact_text("login.no_account", "account") }}</p>
+</section>
+{% endblock %}

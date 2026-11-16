@@ -1,0 +1,24 @@
+name: test
+
+# Reusable test job (pytest on tests/ + the extraction package's own tests). Called by ci.yml and
+# as a gating stage of web-bpd.yml. No test touches Azure, SQL, blob or the Anthropic API; the
+# golden-file tests skip here (samples/ is gitignored health data). unixodbc only so that pyodbc
+# imports (the same as the monorepo); nothing opens a connection.
+on:
+  workflow_call:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: System deps (unixodbc so pyodbc imports)
+        run: sudo apt-get update && sudo apt-get install -y unixodbc
+      - name: pytest
+        run: uv run pytest tests extraction/validate.py

@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ t("privacy.summary") }} &middot; {{ t("app.name") }}{% endblock %}
+{% block content %}
+<article class="datainfo">
+  <h1>{{ t("privacy.summary") }}</h1>
+  <h2>{{ t("privacy.where.title") }}</h2>
+  <ul>
+    {% for i in range(1, 6) %}<li>{{ t("privacy.where." ~ i) }}</li>{% endfor %}
+    {% set contact = contact_text("privacy.delete", "delete") %}
+    {% if contact %}<li>{{ contact }}</li>{% endif %}
+  </ul>
+  <h2>{{ t("privacy.protect.title") }}</h2>
+  <ul>{% for i in range(1, 8) %}<li>{{ t("privacy.protect." ~ i) }}</li>{% endfor %}</ul>
+</article>
+{% endblock %}

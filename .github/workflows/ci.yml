@@ -1,0 +1,28 @@
+name: CI
+
+# Lint + test on every push that can change their verdict. The repo is PRIVATE, so every run is
+# metered Actions minutes (a 15 s job bills a full minute) -- hence an ALLOWLIST of what ruff and
+# pytest actually read, not `paths-ignore`. Docs-only pushes (docs/, root *.md, .azure/) run nothing.
+# Keep in step with lint.yml/test.yml: widening what they read means widening this list.
+#
+# Nothing here weakens the pre-deploy gate: web-bpd.yml calls lint.yml AND test.yml
+# unconditionally on the commit being deployed.
+on:
+  push:
+    paths:
+      - 'src/**'
+      - 'tests/**'
+      - 'scripts/**'
+      - 'extraction/**'
+      - '.claude/hooks/**'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - '.github/workflows/ci.yml'
+      - '.github/workflows/lint.yml'
+      - '.github/workflows/test.yml'
+
+jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml
+  test:
+    uses: ./.github/workflows/test.yml

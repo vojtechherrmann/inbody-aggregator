@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon %}
+{% block title %}{{ t("share.title") }} &middot; {{ t("app.name") }}{% endblock %}
+{% block content %}
+<h1>{{ t("share.title") }}</h1>
+{% if notice %}<p class="notice" role="status">{{ t(notice) }}</p>{% endif %}
+<div class="sharing-grid">
+  <section class="card">
+    <h2>{{ t("share.whoSees") }}</h2>
+    {# Only the session user's own grants -- never a list of all users. #}
+    <ul class="share-list">
+      {% for g in grants %}
+        <li>
+          <div class="share-row">
+            <span class="who-name">{{ g.viewer_id }}<small>{{ t("share.readOnly") }}</small></span>
+            <a class="icon-danger" href="/sharing?revoke={{ g.viewer_id | urlencode }}" aria-label="{{ t('share.revoke', name=g.viewer_id) }}" title="{{ t('share.revoke', name=g.viewer_id) }}">{{ icon("trash", 16) }}</a>
+          </div>
+          {% if revoke == g.viewer_id %}
+            <div class="confirm" role="alertdialog" aria-labelledby="revoke-text">
+              <p id="revoke-text">{{ t("share.confirmRevoke", name=g.viewer_id) }}</p>
+              <div class="btns">
+                <a class="btn-quiet" href="/sharing" data-cancel autofocus>{{ t("share.cancel") }}</a>
+                <form method="post" action="/sharing/revoke">
+                  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+                  <input type="hidden" name="viewer" value="{{ g.viewer_id }}">
+                  <button type="submit" class="btn-danger">{{ t("share.revokeBtn") }}</button>
+                </form>
+              </div>
+            </div>
+          {% endif %}
+        </li>
+      {% else %}
+        <li class="muted">{{ t("share.nobody") }}</li>
+      {% endfor %}
+    </ul>
+    <form method="post" action="/sharing/grant" class="share-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <label for="share-user">{{ t("share.username") }}</label>
+      <input id="share-user" name="username" required maxlength="32" autocomplete="off" autocapitalize="none" spellcheck="false">
+      <button type="submit" class="primary">{{ t("share.shareBtn") }}</button>
+    </form>
+    <p class="muted small">{{ t("share.fullHistory") }}</p>
+  </section>
+  <section class="card">
+    <h2>{{ t("share.withMe") }}</h2>
+    <ul class="share-list">
+      {% for owner in incoming %}
+        <li><a href="/history?subject={{ owner | urlencode }}" title="{{ t('share.openTip', name=owner) }}">{{ owner }}</a></li>
+      {% else %}
+        <li class="muted">{{ t("share.noneWithMe") }}</li>
+      {% endfor %}
+    </ul>
+  </section>
+</div>
+{% endblock %}

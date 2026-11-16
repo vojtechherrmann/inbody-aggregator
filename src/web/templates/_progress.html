@@ -1,0 +1,18 @@
+{# Three-phase upload progress bar (docs/upload-pipeline.md section 5). Static markup + texts;
+   static/progress.js animates it from the server state in #progress-state (polled) or, during
+   the browser upload, static/upload.js drives phase 1 from real XHR progress. #}
+<div class="pbar-wrap">
+  <div id="pbar" class="pbar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
+       aria-label="{{ t('progress.label') }}"
+       data-t-store="{{ t('progress.store') }}" data-t-parse="{{ t('progress.parse') }}" data-t-save="{{ t('progress.save') }}"
+       data-t-left="{{ t('progress.left') }}" data-t-slow="{{ t('progress.slow') }}" data-t-done="{{ t('progress.done') }}"
+       data-t-failed="{{ t('progress.failed') }}" data-t-budget="{{ t('progress.budget') }}" data-t-duplicate="{{ t('progress.duplicate') }}">
+    <div class="seg" data-seg="0"><div class="fill"></div></div>
+    <div class="seg" data-seg="1"><div class="fill"></div></div>
+    <div class="seg" data-seg="2"><div class="fill"></div></div>
+  </div>
+  <div class="pbar-labels muted small" aria-hidden="true">
+    <span>1. {{ t('progress.store') }}</span><span>2. {{ t('progress.parse') }}</span><span>3. {{ t('progress.save') }}</span>
+  </div>
+  <p id="pbar-text" class="small" aria-live="polite"></p>
+</div>

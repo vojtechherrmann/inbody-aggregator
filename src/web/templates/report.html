@@ -1,0 +1,121 @@
+{% extends "base.html" %}
+{% from "_ui.html" import icon, pill, delta, rangebar, infobox with context %}
+{% block title %}{{ t("nav.report") }} &middot; {{ t("app.name") }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ static_url('charts.css') }}">{% endblock %}
+{% block tabs %}{% set tab = "report" %}{% include "_tabs.html" %}{% endblock %}
+{% block content %}
+{% if notice %}<p class="notice" role="status">{{ t(notice) }}</p>{% endif %}
+{% if not rows %}
+  <div class="empty">
+    <p>{{ (t("rep.noDataOwnFriends") if subjects | length > 1 else t("rep.noDataOwn")) if viewing_own else t("rep.noDataShared") }}</p>
+    {% if is_guest %}<span class="btn-primary" aria-disabled="true" title="{{ t('guest.unavailable') }}">{{ icon("upload") }}<span>{{ t("nav.upload") }}</span></span>
+    {% elif viewing_own %}<a class="btn-primary" href="/upload">{{ icon("upload") }}<span>{{ t("nav.upload") }}</span></a>{% endif %}
+  </div>
+{% else %}
+{% set r = rows[idx] %}
+{% set base = "/report?subject=" ~ (subject | urlencode) %}
+<div class="rep-head">
+  <h1>{{ f.date_long(r.measured_date) }}{% if r.measured_time %}<small title="{{ t('rep.printedTime') }}">{{ r.measured_time }}</small>{% endif %}</h1>
+  <div class="stepper">
+    {% if idx > 0 %}<a class="step" href="{{ base }}&amp;m={{ rows[idx - 1].id }}" aria-label="{{ t('rep.prev') }}" title="{{ t('rep.prev') }}">&lsaquo;</a>
+    {% else %}<span class="step" aria-disabled="true">&lsaquo;</span>{% endif %}
+    <form method="get" action="/report">
+      <input type="hidden" name="subject" value="{{ subject }}">
+      <select name="m" aria-label="{{ t('rep.measurement') }}" data-autosubmit>
+        {% for x in rows | reverse %}
+          <option value="{{ x.id }}" {% if x.id == r.id %}selected{% endif %}>{{ f.date(x.measured_date) }}</option>
+        {% endfor %}
+      </select>
+      <noscript><button type="submit" class="btn-quiet">{{ t("nav.show") }}</button></noscript>
+    </form>
+    {% if idx < rows | length - 1 %}<a class="step" href="{{ base }}&amp;m={{ rows[idx + 1].id }}" aria-label="{{ t('rep.next') }}" title="{{ t('rep.next') }}">&rsaquo;</a>
+    {% else %}<span class="step" aria-disabled="true">&rsaquo;</span>{% endif %}
+    {% if can_edit %}
+      <a class="icon-danger" href="{{ base }}&amp;m={{ r.id }}&amp;confirm=delete" aria-label="{{ t('rep.deleteBtn') }}" title="{{ t('rep.deleteBtn') }}">{{ icon("trash", 17) }}</a>
+    {% elif is_guest %}
+      <span class="icon-danger" aria-disabled="true" role="img" aria-label="{{ t('rep.deleteBtn') }}" title="{{ t('guest.unavailable') }}">{{ icon("trash", 17) }}</span>
+    {% endif %}
+  </div>
+</div>
+
+{% if confirm and can_edit %}
+<div class="confirm" role="alertdialog" aria-labelledby="confirm-text">
+  <p id="confirm-text">{{ t("rep.confirmDelete", d=f.date(r.measured_date)) }}</p>
+  <div class="btns">
+    <a class="btn-quiet" href="{{ base }}&amp;m={{ r.id }}" data-cancel autofocus>{{ t("rep.cancel") }}</a>
+    <form method="post" action="/measurements/{{ r.id }}/delete">
+      <input type="hidden" name="csrf_token" value="{{ csrf }}">
+      <button type="submit" class="btn-danger">{{ t("rep.del") }}</button>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<div class="rep-meta">
+  {% if idx == rows | length - 1 %}<span class="chip latest">{{ t("rep.latest") }}</span>{% endif %}
+  <span class="chip">{{ t("src." ~ r.origin) }}</span>
+  <span>{{ r.gym or t("src.gymMissing") }}</span>
+  <span class="rep-compare">{{ t("rep.comparedWith", d=f.date(rows[idx - 1].measured_date)) if idx > 0 else t("rep.firstOne") }}</span>
+</div>
+
+<div class="tiles">
+  {% for key in ["weight_kg", "skeletal_muscle_mass_kg", "percent_body_fat", "inbody_score"] %}
+    {% set tv = f.tile(key, r) %}
+    <div class="tile">
+      <div class="lbl">{{ t("metric." ~ key) }}</div>
+      <div class="val">{{ tv[0] }}{% if tv[1] %}<small>{{ tv[1] }}</small>{% endif %}</div>
+      {{ delta(f.delta(key, rows, idx)) }}
+    </div>
+  {% endfor %}
+</div>
+
+{% macro kvcard(r, title, items, extra=(), section="") %}
+<section class="rcard">
+  <div class="rcard-head"><h2>{{ title }}</h2>{{ infobox(section, f.info(section, present)) }}</div>
+  <div class="kv">
+  {% for it in items %}
+    {% set key = it[0] if it is not string else it %}
+    {% set ev = it[1] if it is not string else none %}
+    {% if not (key in extra and r[key] is none) %}
+      {# fixed structure, same in every card: name | value, then pill | change, then the bar #}
+      <div class="kvrow">
+        <div class="k-name">{{ t("metric." ~ key) }}</div>
+        <div class="v{% if r[key] is none %} na{% endif %}">{{ f.val(key, r[key]) }}</div>
+        <div class="sub">{{ pill(f.pill_printed("body", r[ev]) if ev else f.pill_range(key, r)) }}<span class="d">{{ delta(f.delta(key, rows, idx)) }}</span></div>
+        {% set b = f.bar(key, r) %}{% if b %}<div class="bar">{{ rangebar(b) }}</div>{% endif %}
+      </div>
+    {% endif %}
+  {% endfor %}
+  </div>
+</section>
+{% endmacro %}
+
+<div class="rep-grid">
+  {{ kvcard(r, t("rep.secMuscleFat"), ["weight_kg", "skeletal_muscle_mass_kg", "body_fat_mass_kg"], (), "muscleFat") }}
+  {{ kvcard(r, t("rep.secObesity"), [("bmi", "bmi_eval"), ("percent_body_fat", "pbf_eval"), "visceral_fat_level", "waist_hip_ratio", "obesity_degree_pct"], (), "obesity") }}
+  {{ kvcard(r, t("rep.secComposition"), ["total_body_water_l", "protein_kg", "minerals_kg", "fat_free_mass_kg", "dry_lean_mass_kg", "soft_lean_mass_kg"], ("dry_lean_mass_kg", "soft_lean_mass_kg"), "composition") }}
+  {{ kvcard(r, t("rep.secMetabolism"), ["bmr_kcal", "inbody_score", "smi_kg_m2", "recommended_intake_kcal"], (), "metabolism") }}
+  <section class="rcard wide">
+    <div class="rcard-head"><h2>{{ t("rep.secSegmental") }}</h2>{{ infobox("segmental", f.info("segmental", present)) }}</div>
+    <div class="segmap">
+      {% for s in segs %}
+      <div class="segcell seg-{{ s }}">
+        <h3>{{ t("seg." ~ s) }}</h3>
+        {% for m, lbl in [("lean", t("rep.lean")), ("fat", t("rep.fat"))] %}
+          {% set kk = "seg_" ~ m ~ "_" ~ s ~ "_kg" %}{% set pk = "seg_" ~ m ~ "_" ~ s ~ "_pct" %}
+          <div class="row">
+            <div class="seg-l"><span class="seg-k">{{ lbl }}</span>{{ pill(f.pill_printed(m, r["seg_" ~ m ~ "_" ~ s ~ "_eval"])) }}</div>
+            <div class="seg-r">
+              <b>{{ f.val(kk, r[kk]) }}{% if r[pk] is not none %}<small> · {{ f.val(pk, r[pk]) }} {{ t("rep.ofIdeal") }}</small>{% endif %}</b>
+              {{ delta(f.delta(kk, rows, idx)) }}
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+<p class="note">{{ t("rep.missingNote") }}</p>
+{% endif %}
+{% endblock %}

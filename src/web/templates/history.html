@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ t("history.title") }} &middot; {{ t("app.name") }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ static_url('charts.css') }}">{% endblock %}
+{% block tabs %}{% set tab = "history" %}{% include "_tabs.html" %}{% endblock %}
+{% block content %}
+{% if notice %}<p class="notice" role="status">{{ t(notice) }}
+  {% if notice == "notice.password_admin_set" %}<a href="/account/password">{{ t("notice.password_admin_set_link") }}</a>{% endif %}</p>{% endif %}
+{# The chart module renders everything below from the JSON blocks (no API call). #}
+<div id="history-root"><noscript><p class="muted">{{ t("history.noscript") }}</p></noscript></div>
+<script type="application/json" id="history-data">{{ history_json | safe }}</script>
+<script type="application/json" id="i18n-data">{{ i18n_json | safe }}</script>
+{% endblock %}
+{% block scripts %}
+<script src="{{ static_url('strings.js') }}" defer></script>
+<script src="{{ static_url('charts.js') }}" defer></script>
+<script src="{{ static_url('history.js') }}" defer></script>
+{% endblock %}

@@ -1,0 +1,6 @@
+Vendored third-party assets (served from 'self' so the CSP needs no CDN). Re-download from
+cdn.jsdelivr.net/npm/<pkg>@<version>/... and compare before replacing. sha256:
+e209dda5c8235479f3166defc7750e1dbcd5a5c1808b7792fc2e6733768fb447  htmx-2.0.4.min.js
+8f074624e50ab805878b26ab5f3e0fa360043d546c35b043947e96a5c7071970  ../fonts/playfair-display-latin-500-italic.woff2  (Playfair Display 500 italic, @fontsource/playfair-display 5.3.0, SIL OFL 1.1; licence: ../fonts/OFL-playfair-display.txt)
+224ec72e732a9ccf564a90d056fc637fc29ac0be8209b0fa1a16730430d6cf02  ../fonts/playfair-display-latin-ext-500-italic.woff2  (Playfair Display 500 italic, @fontsource/playfair-display 5.3.0, SIL OFL 1.1; licence: ../fonts/OFL-playfair-display.txt)
+7eb811eb14b2ee22e3fba942b25c6cd062ff050bde10d29af1a4e16f99712e17  ../fonts/saira-latin-wght-normal.woff2  (Saira variable wght, @fontsource-variable/saira 5.3.0, SIL OFL 1.1; licence: ../fonts/OFL-saira.txt)

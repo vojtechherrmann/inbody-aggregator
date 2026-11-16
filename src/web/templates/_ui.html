@@ -1,0 +1,49 @@
+{# Small shared UI pieces: icons (inline SVG, CSP-safe), evaluation pill, delta cell, range bar. #}
+{% macro icon(name, size=16) -%}
+<svg width="{{ size }}" height="{{ size }}" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+{%- if name == "upload" %}<path d="M8 10.5V2.5M4.75 5.5 8 2.25l3.25 3.25M2.5 10v2.5a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V10"/>
+{%- elif name == "share" %}<circle cx="6.2" cy="5.2" r="2.6"/><path d="M1.6 13.8c.5-2.6 2.3-4 4.6-4s4.1 1.4 4.6 4M12.6 5.2v4.2M10.5 7.3h4.2"/>
+{%- elif name == "gear" %}<circle cx="8" cy="8" r="2.2"/><path d="M8 1.6v1.6M8 12.8v1.6M14.4 8h-1.6M3.2 8H1.6M12.5 3.5l-1.1 1.1M4.6 11.4l-1.1 1.1M12.5 12.5l-1.1-1.1M4.6 4.6 3.5 3.5"/><circle cx="8" cy="8" r="4.6"/>
+{%- elif name == "trash" %}<path d="M2.5 4h11M6.2 4V2.6h3.6V4M4 4l.7 9.2a1 1 0 0 0 1 .9h4.6a1 1 0 0 0 1-.9L12 4M6.7 6.6v5M9.3 6.6v5"/>
+{%- elif name == "good" %}<path d="M8 1.7a6.3 6.3 0 1 0 0 12.6A6.3 6.3 0 0 0 8 1.7ZM5.2 8.2l2 2 3.7-3.9"/>
+{%- elif name == "warn" %}<path d="M8 1.8 14.6 13.6H1.4L8 1.8ZM8 6.3v3.3M8 11.6v.1"/>
+{%- endif %}</svg>
+{%- endmacro %}
+
+{# ⓘ explainer for a Report section: same look as the History charts' info boxes (charts.css),
+   a <details> so it works without JS; shell.js closes it on Esc / an outside click. #}
+{# Same markup as the History charts' ⓘ (static/charts.js infoButton): term definitions from the
+   shared def.* strings, then a short note. #}
+{% macro infobox(section, info) -%}
+<details class="ibc-info" data-section="{{ section }}">
+  <summary class="ibc-info-btn" aria-label="{{ t('rep.info.label') }}" title="{{ t('rep.info.label') }}">
+    <svg width="18" height="18" viewBox="0 0 18 18" aria-hidden="true"><circle cx="9" cy="9" r="7.5" class="ibc-info-ring"/><path d="M9 8v4.6M9 5.4v.2" class="ibc-info-i"/></svg>
+  </summary>
+  <div class="ibc-info-box" role="note">
+    {% for term, text in info["items"] %}<p class="ibc-def"><b>{{ term }}</b>: {{ text }}</p>{% endfor %}
+    <p class="ibc-info-note">{{ info["note"] }}</p>
+  </div>
+</details>
+{%- endmacro %}
+
+{% macro pill(p) -%}
+{% if p %}<span class="eval {{ p.tone }}">{{ icon("good" if p.tone == "good" else "warn", 13) }}<span>{{ p.text }}</span></span>{% endif %}
+{%- endmacro %}
+
+{% macro delta(d) -%}
+{% if d is none %}<span class="delta"></span>
+{% elif d.cls == "none" %}<span class="delta none" aria-hidden="true">&nbsp;</span>
+{% else %}<span class="delta {{ d.cls }} {{ d.tone }}">{{ d.text }}{% if d.vs %} <span class="vs">{{ d.vs }}</span>{% endif %}</span>{% endif %}
+{%- endmacro %}
+
+{% macro rangebar(b) -%}
+{% if b %}<div class="rb">
+  <svg class="rb-svg" aria-hidden="true">
+    <rect class="rb-track" x="0" y="0" width="100%" height="8" rx="4"/>
+    <rect class="rb-band" x="{{ b.band_x }}%" y="0" width="{{ b.band_w }}%" height="8" rx="4"/>
+    {% for x, label in b.ticks %}<line class="rb-tick" x1="{{ x }}%" x2="{{ x }}%" y1="10" y2="13"/><text class="rb-tl" x="{{ x }}%" y="23" text-anchor="middle">{{ label }}</text>{% endfor %}
+    <circle class="rb-dot" cx="{{ b.dot_x }}%" cy="4" r="5"/>
+  </svg>
+  <span class="rb-text">{{ b.text }}</span>
+</div>{% endif %}
+{%- endmacro %}

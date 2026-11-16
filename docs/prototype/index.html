@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>InBody Aggregator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="ui.css">
+<link rel="stylesheet" href="charts.css">
+</head>
+<body>
+<script src="theme.js"></script>
+<!-- Elements marked data-prototype-only are dev notes for the prototype; the app drops them.
+     Page template shared by build_example.py (-> ui.html, artifact, example data inlined) and
+     serve_local.py (real data injected at request time, assets served as files under a strict CSP).
+     No inline script or style: data travels as application/json, behaviour lives in the .js files. -->
+<header class="band appbar">
+  <div class="inner">
+    <div class="brand" aria-label="InBody Aggregator"><b>InBody</b> <span>Aggregator</span></div>
+    <div class="grow"></div>
+    <div class="actions">
+      <button type="button" class="btn-primary" id="upload-btn">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 10.5V2.5M4.75 5.5 8 2.25l3.25 3.25M2.5 10v2.5a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1V10"/></svg>
+        <span id="upload-label">Upload</span>
+      </button>
+      <div class="settings">
+        <button type="button" class="btn-quiet" id="share-btn" aria-expanded="false" aria-controls="share-panel">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6.2" cy="5.2" r="2.6"/><path d="M1.6 13.8c.5-2.6 2.3-4 4.6-4s4.1 1.4 4.6 4M12.6 5.2v4.2M10.5 7.3h4.2"/></svg>
+          <span id="share-label">Sharing</span>
+        </button>
+        <div class="settings-panel share-panel" id="share-panel" hidden></div>
+      </div>
+      <div class="settings">
+        <button type="button" class="btn-quiet" id="settings-btn" aria-expanded="false" aria-controls="settings-panel">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="8" r="2.2"/><path d="M8 1.6v1.6M8 12.8v1.6M14.4 8h-1.6M3.2 8H1.6M12.5 3.5l-1.1 1.1M4.6 11.4l-1.1 1.1M12.5 12.5l-1.1-1.1M4.6 4.6 3.5 3.5"/><circle cx="8" cy="8" r="4.6"/></svg>
+          <span id="settings-label">Settings</span>
+        </button>
+        <form class="settings-panel" id="settings-panel" hidden>
+          <fieldset>
+            <legend id="set-lang-l">Language</legend>
+            <label><input type="radio" name="lang" value="cs" id="set-lang-cs"> <span lang="cs">Čeština</span></label>
+            <label><input type="radio" name="lang" value="en" id="set-lang-en"> <span lang="en">English</span></label>
+          </fieldset>
+          <fieldset>
+            <legend id="set-theme-l">Appearance</legend>
+            <label><input type="radio" name="theme" value="dark" id="set-theme-dark"> <span id="set-dark">Dark</span></label>
+            <label><input type="radio" name="theme" value="light" id="set-theme-light"> <span id="set-light">Light</span></label>
+            <label><input type="radio" name="theme" value="system" id="set-theme-system"> <span id="set-system">System</span></label>
+          </fieldset>
+          <fieldset>
+            <legend id="set-units-l">Units</legend>
+            <label><input type="radio" name="mass" value="metric" id="set-mass-metric"> <span id="set-metric">Metric (kg, cm)</span></label>
+            <label><input type="radio" name="mass" value="imperial" id="set-mass-imperial"> <span id="set-imperial">Imperial (lb, ft-in)</span></label>
+            <div class="set-sub" id="set-energy-l">Energy</div>
+            <label><input type="radio" name="energy" value="kcal" id="set-energy-kcal"> kcal</label>
+            <label><input type="radio" name="energy" value="kJ" id="set-energy-kj"> kJ</label>
+          </fieldset>
+          <p class="set-hint dev-note" id="set-stored" data-prototype-only></p>
+        </form>
+      </div>
+      <button type="button" class="ghost" id="logout">Log out</button>
+    </div>
+  </div>
+  <div class="inner"><p class="pop" id="upload-pop" role="status" hidden></p></div>
+</header>
+<div class="band mobile-notice" id="mobile-notice" role="note"><div class="inner"><span id="mobile-notice-text"></span><button type="button" class="mobile-notice-x" id="mobile-notice-x"><span aria-hidden="true">&#x2715;</span></button></div></div>
+<div class="toast" id="toast" role="status" hidden><span id="toast-text"></span><button type="button" id="toast-undo"></button></div>
+<div class="band banner" id="banner"><div class="inner banner-row"><span id="banner-text"></span><span class="dev-switch" id="dev-switch" data-prototype-only></span></div></div>
+<div class="band">
+  <div class="inner">
+    <div class="tabrow">
+      <div class="who" id="who-wrap"><select id="who" aria-label="Viewing"></select></div>
+      <div class="tabs" role="tablist">
+        <button type="button" role="tab" id="tab-report" aria-controls="p-report" aria-selected="false">Report</button>
+        <button type="button" role="tab" id="tab-history" aria-controls="p-history" aria-selected="true">History</button>
+      </div>
+    </div>
+    <main>
+      <p id="ro-notice" class="notice" hidden></p>
+      <section id="p-report" role="tabpanel" aria-labelledby="tab-report" hidden></section>
+      <section id="p-history" role="tabpanel" aria-labelledby="tab-history"></section>
+    </main>
+  </div>
+</div>
+<footer class="band site-footer"><div class="inner" id="footer-text">© VojtaH</div></footer>
+<div class="quote quote-l" id="quote-l" aria-hidden="true"><p></p></div>
+<div class="quote quote-r" id="quote-r" aria-hidden="true"><p></p></div>
+<script type="application/json" id="inbody-data">__INBODY_DATA__</script>
+<script src="i18n.js"></script>
+<script src="charts.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

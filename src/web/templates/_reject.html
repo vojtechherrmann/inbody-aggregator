@@ -1,0 +1,9 @@
+{# A refused upload (docs/upload-pipeline.md section 1): message + CSV tip / contact where the spec says so. #}
+<div class="notice error" role="alert">
+  <p>{{ t("notice." ~ key | replace(".", "_")) }}</p>
+  {% if key in ("upload.err.type", "upload.err.empty") %}{% include "_csv_tip.html" %}{% endif %}
+  {% if key in ("upload.err.type", "upload.err.daily") %}
+    {% set contact = contact_text("contact.text", "extra" if key == "upload.err.daily" else "upload") %}
+    {% if contact %}<p>{{ contact }}</p>{% endif %}
+  {% endif %}
+</div>

@@ -1,0 +1,21 @@
+name: lint
+
+# Reusable lint job (ruff check + format on src/, tests/, scripts/). Called by ci.yml (on push) and as the
+# first gating stage of web-bpd.yml via `uses: ./.github/workflows/lint.yml`. Ruff is pinned to the
+# same version as .pre-commit-config.yaml and the dev group in pyproject.toml.
+on:
+  workflow_call:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: ruff check
+        run: uvx ruff@0.15.15 check src/ tests/ scripts/
+      - name: ruff format
+        run: uvx ruff@0.15.15 format --check src/ tests/ scripts/

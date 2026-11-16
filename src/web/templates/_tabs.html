@@ -1,0 +1,21 @@
+{# The tab row: "whose data" selector first, then Report | History. The selector lists only people
+   data.can_view allows (me, owners who shared with me; admin: all); with nobody else to pick it is
+   a plain name. Its visible label is gone, so the select carries an aria-label. #}
+<div class="tabrow">
+  {% if subjects | length > 1 %}
+    <form class="who" method="get" action="{{ view_path }}">
+      <select id="who" name="subject" aria-label="{{ t('nav.viewing') }}" data-autosubmit>
+        {% for s in subjects %}
+          <option value="{{ s }}" {% if s == subject %}selected{% endif %}>{% if s == user.id and is_guest %}{{ t("guest.name") }}{% else %}{{ s }}{% endif %}{% if s == user.id %} ({{ t("nav.you") }}){% endif %}</option>
+        {% endfor %}
+      </select>
+      <noscript><button type="submit" class="btn-quiet">{{ t("nav.show") }}</button></noscript>
+    </form>
+  {% else %}
+    <div class="who"><span class="who-static" id="who" role="note" aria-label="{{ t('nav.viewing') }}">{% if subject == user.id and is_guest %}{{ t("guest.name") }}{% else %}{{ subject }}{% endif %}{% if subject == user.id %} ({{ t("nav.you") }}){% endif %}</span></div>
+  {% endif %}
+  <nav class="tabs">
+    <a href="/report?subject={{ subject | urlencode }}" {% if tab == "report" %}aria-current="page"{% endif %}>{{ t("nav.report") }}</a>
+    <a href="/history?subject={{ subject | urlencode }}" {% if tab == "history" %}aria-current="page"{% endif %}>{{ t("nav.history") }}</a>
+  </nav>
+</div>

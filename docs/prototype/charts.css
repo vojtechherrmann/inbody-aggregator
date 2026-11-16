@@ -1,0 +1,175 @@
+/* InbodyCharts styles. Consumes these theme tokens (defined in ui.css, light + dark):
+   --card --ink --ink-2 --muted --axis-text --grid --axis --ring --chip --band
+   --s1 --s2 --s3 (validated categorical slots) --ctx (neutral bar/line) --focus */
+
+.ibc { display: flex; flex-direction: column; gap: 14px; }
+.ibc-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* filter row: one row above everything it scopes */
+.ibc-filters { position: relative; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 14px; }
+/* frozen under the app bar + tab row on a roomy screen (same rule as the host page: > 760 px wide and >= 640 px
+   tall); --ibc-pin-top is the host's pinned height above it. Padding and negative margin cancel, so the layout
+   at rest is unchanged; the opaque page background keeps content from showing through, and the row tucks 2 px
+   under the one above it so no sub-pixel gap can show. */
+@media (min-width: 761px) and (min-height: 640px) {
+  .ibc-filters { position: sticky; top: calc(var(--ibc-pin-top, 2px) - 2px); z-index: 28; background: var(--page, var(--card)); padding-block: 10px 8px; margin-block: -10px -8px; border-bottom: 1px solid var(--grid); }
+}
+.ibc-pausefield { display: inline-flex; align-items: center; gap: 6px; margin-left: auto; font-size: 13px; color: var(--ink-2); white-space: nowrap; cursor: default; }
+.ibc-pausefield input[type="checkbox"] { width: 16px; height: 16px; margin: 0; accent-color: var(--ink); cursor: pointer; }
+.ibc-pausefield input[type="number"] { width: calc(3.5ch + 14px); padding: 4px 6px; border: 1px solid var(--axis); border-radius: 6px; background: var(--card); color: var(--ink); text-align: right; font: inherit; font-variant-numeric: tabular-nums; }
+.ibc-pausefield input[type="number"]:disabled { opacity: .45; cursor: not-allowed; }
+.ibc-pausefield input:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.ibc-rangerow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; min-width: 0; }
+.ibc-flabel { color: var(--muted); font-size: 13px; }
+.ibc-summary { margin: 0; color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.ibc-customrange { color: var(--ink); font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* custom month-range picker: a dialog-like popover under the filter row (the row is its positioning
+   context, also while it is frozen), two month grids side by side: From | To */
+.ibc-picker { position: absolute; z-index: 40; top: calc(100% + 4px); left: 0; width: min(460px, 100%); box-sizing: border-box; background: var(--card); color: var(--ink); border: 1px solid var(--ring); border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.18); padding: 12px 14px; }
+.ibc-picker-cols { display: flex; gap: 18px; }
+.ibc-pk { flex: 1 1 0; min-width: 0; }
+.ibc-pk-label { font-size: 12px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.ibc-pk-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+.ibc-pk-year { font-weight: 600; font-variant-numeric: tabular-nums; }
+.ibc-pk-nav { font: inherit; font-size: 20px; line-height: 1; width: 36px; height: 36px; background: none; border: 0; border-radius: 8px; color: var(--ink-2); cursor: pointer; }
+.ibc-pk-nav:hover:not(:disabled) { background: var(--chip); }
+.ibc-pk-nav:disabled { opacity: .3; cursor: not-allowed; }
+.ibc-pk-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; }
+.ibc-pk-m { font: inherit; font-size: 13px; min-height: 38px; padding: 0; background: none; border: 1px solid transparent; border-radius: 8px; color: var(--ink); cursor: pointer; }
+.ibc-pk-m:hover:not([aria-disabled="true"]) { background: var(--chip); }
+.ibc-pk-m.in { background: color-mix(in srgb, var(--s1) 20%, transparent); }
+.ibc-pk-m[aria-pressed="true"] { background: var(--ink); color: var(--card); font-weight: 600; }
+.ibc-pk-m[aria-disabled="true"] { color: var(--muted); opacity: .4; cursor: not-allowed; }
+.ibc-pk-nav:focus-visible, .ibc-pk-m:focus-visible, .ibc-picker-done:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.ibc-picker-foot { display: flex; justify-content: flex-end; margin-top: 10px; }
+.ibc-picker-done { font: inherit; font-size: 13px; font-weight: 600; background: var(--ink); color: var(--card); border: 0; border-radius: 8px; padding: 8px 16px; cursor: pointer; }
+@media (max-width: 640px) {
+  .ibc-picker { left: 0; right: 0; width: auto; padding: 10px; }
+  .ibc-picker-cols { gap: 10px; }
+  .ibc-pk-m { min-height: 44px; }
+  .ibc-pk-nav { width: 44px; height: 44px; }
+  .ibc-picker-done { min-height: 44px; }
+}
+
+/* segmented controls */
+.ibc-ctls { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0 6px; }
+.ibc-ctl-left { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
+.ibc-ctl-right { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: 8px; margin-left: auto; }
+.ibc-ctl { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--axis); border-radius: 8px; overflow: hidden; background: var(--card); max-width: 100%; }
+.ibc-ctl button { font: inherit; font-size: 13px; background: none; border: 0; padding: 6px 11px; color: var(--ink-2); cursor: pointer; white-space: nowrap; }
+.ibc-ctl button + button { border-left: 1px solid var(--grid); }
+.ibc-ctl button:hover:not(:disabled) { background: var(--chip); }
+.ibc-ctl button[aria-pressed="true"] { background: var(--ink); color: var(--card); font-weight: 600; }
+.ibc-ctl button:disabled { color: var(--muted); opacity: .55; cursor: not-allowed; }
+.ibc-ctl button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.ibc-ctl-small button { padding: 6px 9px; }
+
+/* sections and cards */
+.ibc-section { font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 10px 0 -4px; }
+.ibc-card { background: var(--card); border: 1px solid var(--ring); border-radius: 10px; padding: 16px 16px 12px; min-width: 0; }
+.ibc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.ibc-head h3 { margin: 0; font-size: 16px; font-weight: 600; color: var(--ink); text-wrap: balance; }
+.ibc-unit { margin-left: 6px; font-weight: 400; color: var(--muted); font-size: .85em; }
+.ibc-info { position: relative; flex: none; }
+.ibc-info-btn { display: inline-grid; place-items: center; width: 30px; height: 30px; border: 0; border-radius: 50%; background: none; color: var(--muted); cursor: pointer; padding: 0; }
+.ibc-info-btn:hover, details.ibc-info[open] > .ibc-info-btn { background: var(--chip); color: var(--ink); }
+details.ibc-info > summary { list-style: none; }
+details.ibc-info > summary::-webkit-details-marker { display: none; }
+.ibc-info-btn:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.ibc-info-ring { fill: none; stroke: currentColor; stroke-width: 1.4; }
+.ibc-info-i { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+.ibc-info-box { position: absolute; right: 0; top: 36px; z-index: 20; width: min(340px, 82vw); background: var(--card); color: var(--ink-2); border: 1px solid var(--ring); border-radius: 10px; box-shadow: 0 8px 28px rgba(0,0,0,.16); padding: 10px 14px; font-size: 13px; }
+.ibc-info-box p { margin: 0; }
+.ibc-info-box p + p { margin-top: 6px; }
+.ibc-info-box { text-transform: none; letter-spacing: normal; font-weight: 400; text-align: left; }
+.ibc-def b { color: var(--ink); font-weight: 600; }
+.ibc-info-note { color: var(--muted); border-top: 1px solid var(--grid); padding-top: 6px; }
+.ibc-mini + .ibc-mini { margin-top: 6px; }
+.ibc-mini-h { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; color: var(--ink-2); margin-top: 6px; }
+.ibc-yunit { fill: var(--axis-text); font-size: 11px; }
+.ibc-layer { stroke-width: 2; }
+.ibc-card.small .ibc-head h3 { font-size: 14px; }
+.ibc-notes ul { margin: 6px 0 0; padding-left: 18px; color: var(--ink-2); font-size: 13px; }
+.ibc-notes li + li { margin-top: 4px; }
+.ibc-grid-small { display: grid; gap: 14px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); }
+
+.ibc-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 4px 0 2px; font-size: 13px; color: var(--ink-2); }
+.ibc-legend > * { display: inline-flex; align-items: center; gap: 7px; padding: 2px 0; }
+.ibc-legend button { font: inherit; background: none; border: 0; color: var(--ink-2); cursor: pointer; }
+.ibc-legend button[aria-pressed="false"] { opacity: .45; text-decoration: line-through; }
+.ibc-legend button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+.ibc-swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: currentColor; flex: none; }
+.ibc-swatch.total { background: none; border: 1.5px solid var(--ink-2); }
+.ibc-key { flex: none; overflow: visible; }
+.ibc-key-line { stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; }
+
+/* plot */
+.ibc-plot { position: relative; margin-top: 4px; border-radius: 6px; }
+.ibc-plot:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.ibc-svg { display: block; width: 100%; height: auto; touch-action: pan-y; cursor: crosshair; overflow: visible; }
+.ibc-empty { color: var(--muted); font-size: 13px; padding: 0 12px; margin: 0; text-align: center; display: flex; align-items: center; justify-content: center; }
+.ibc-empty.big { padding: 60px 0; font-size: 15px; flex-direction: column; gap: 14px; }
+.ibc-empty.big p { margin: 0; }
+.ibc-panel { background: var(--card); border: 1px solid var(--ring); border-radius: 10px; padding: 48px 20px; color: var(--ink-2); }
+.ibc-panel-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 18px; }
+
+.ibc-grid { stroke: var(--grid); stroke-width: 1; }
+.ibc-axis { stroke: var(--axis); stroke-width: 1; }
+.ibc-tick { fill: var(--axis-text); font-size: 11px; font-variant-numeric: tabular-nums; }
+.ibc-ref { stroke: var(--axis); stroke-width: 1.5; }
+.ibc-ref-label, .ibc-zone { fill: var(--muted); font-size: 11px; }
+.ibc-brk-band { fill: var(--band); }
+.ibc-brk-gap { fill: var(--card); }
+.ibc-brk-mark { stroke: var(--axis-text); stroke-width: 1.5; fill: none; stroke-linecap: round; }
+.ibc-brk-label { fill: var(--muted); font-size: 11px; }
+.ibc-cross { stroke: var(--axis-text); stroke-width: 1; }
+
+.s1 { color: var(--s1); }
+.s2 { color: var(--s2); }
+.s3 { color: var(--s3); }
+.ctx { color: var(--ctx); }
+.ink { color: var(--ink-2); }
+.total { color: var(--ink-2); }
+
+.ibc-line { fill: none; stroke: currentColor; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.ibc-pause { fill: none; stroke: currentColor; stroke-width: 1.75; opacity: .85; stroke-dasharray: 6 4; stroke-linecap: butt; }
+.ibc-bridge { fill: none; stroke: currentColor; stroke-width: 1.75; opacity: .7; stroke-dasharray: 0.5 4; stroke-linecap: round; }
+.ibc-dot { fill: currentColor; stroke: var(--card); stroke-width: 2; }
+.ibc-tri { stroke-linejoin: round; }
+.ibc-key-mark { fill: currentColor; stroke: var(--card); stroke-width: 1.5; }
+.ibc-dot-hl { stroke-width: 2.5; }
+
+.ibc-seg { fill: currentColor; }
+.ibc-bar { transition: opacity .12s; }
+.ibc-bar.dim { opacity: .45; }
+.ibc-total { fill: var(--ink-2); font-size: 11px; font-variant-numeric: tabular-nums; }
+/* value labels: text tokens, never the series colour; a surface halo keeps them legible over lines */
+.ibc-plabel { fill: var(--ink-2); font-size: 10px; font-variant-numeric: tabular-nums; paint-order: stroke; stroke: var(--card); stroke-width: 3px; stroke-linejoin: round; }
+.ibc-seglabel { fill: #ffffff; font-size: 10px; font-weight: 600; font-variant-numeric: tabular-nums; pointer-events: none; }
+/* a label that overflows its segment (or spills into the neighbour) gets a thin dark halo, so white stays readable on any two fills */
+.ibc-spill { stroke: rgba(0,0,0,.35); stroke-width: 2.2px; stroke-linejoin: round; paint-order: stroke; }
+
+/* tooltip: values lead, labels follow; line keys, not boxes (except bar parts) */
+.ibc-tip { position: absolute; z-index: 5; pointer-events: none; background: var(--card); color: var(--ink); border: 1px solid var(--ring); border-radius: 8px; box-shadow: 0 6px 24px rgba(0,0,0,.14); padding: 9px 11px; font-size: 12px; min-width: 170px; max-width: min(320px, 92%); }
+.ibc-tip-h { color: var(--ink-2); margin-bottom: 5px; }
+.ibc-tip-r { display: grid; grid-template-columns: auto auto 1fr; align-items: center; column-gap: 8px; padding: 1px 0; }
+.ibc-tip-r b { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.ibc-tip-r span { color: var(--ink-2); }
+.ibc-tip-r small { grid-column: 2 / -1; color: var(--muted); font-size: 11px; }
+.ibc-tip-note { color: var(--ink-2); margin: 2px 0 4px; }
+.ibc-tip-src { color: var(--muted); margin-top: 6px; padding-top: 5px; border-top: 1px solid var(--grid); }
+
+/* table view (the accessible twin of every chart) */
+.ibc-table { margin-top: 6px; font-size: 12px; color: var(--ink-2); }
+.ibc-table summary { cursor: pointer; color: var(--muted); padding: 4px 0; width: fit-content; }
+.ibc-table summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: 3px; }
+.ibc-tablewrap { overflow-x: auto; margin-top: 4px; }
+.ibc-table table { border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.ibc-table th, .ibc-table td { padding: 4px 12px 4px 0; border-bottom: 1px solid var(--grid); text-align: left; white-space: nowrap; }
+.ibc-table thead th { color: var(--muted); font-weight: 600; }
+.ibc-table tbody th { font-weight: 400; color: var(--ink-2); }
+.ibc-table .num { text-align: right; }
+
+@media (prefers-reduced-motion: reduce) { .ibc-bar { transition: none; } }
+@media (forced-colors: active) { .ibc-line, .ibc-dot, .ibc-seg { forced-color-adjust: auto; } }

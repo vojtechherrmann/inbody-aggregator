@@ -1,0 +1,19 @@
+{# Upload list with a summary card per upload. Re-polls itself every 3 s while anything is unfinished. #}
+<div id="uploads"
+     {% if polling %}hx-get="/history/uploads?subject={{ subject | urlencode }}" hx-trigger="every 3s" hx-swap="outerHTML"{% endif %}>
+  {% for u in uploads %}
+    {% set r = (u.report_json | fromjson) if u.report_json else {} %}
+    {% set c = r.get("counts", {}) %}
+    <article class="u-card">
+      <a href="/uploads/{{ u.id }}"><strong>{{ u.original_name }}</strong></a>
+      {% set st = "deleted" if u.deleted else u.status %}
+      <span class="status s-{{ st }}">{{ t("status." ~ st) }}</span>
+      <br><small class="muted">{{ u.created_at.strftime("%Y-%m-%d %H:%M") }} &middot; {{ t("kind." ~ u.kind) }}
+      {% if not u.deleted and u.status in ("done", "partial", "nothing_new") %}&middot; {{ t("report.card", n=c.get("total", 0), accepted=c.get("accepted", 0), rejected=c.get("rejected", 0)) }}{% endif %}
+      {% set fk = "failcode." ~ (u.error_code or "") %}
+      {% if u.deleted %}{% elif u.status == "needs_review" %}&middot; {{ t("report.needs_review_short") }}{% elif u.status == "failed" and t(fk) != fk %}&middot; {{ t(fk) }}{% endif %}</small>
+    </article>
+  {% else %}
+    <p class="muted">{{ t("uploads.none") }}</p>
+  {% endfor %}
+</div>

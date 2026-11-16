@@ -1,0 +1,40 @@
+{% from "_ui.html" import icon %}
+{# Polled every 1 s while the upload is not final; the progress bar outside reads #progress-state. #}
+<div id="live" {% if not final %}hx-get="/uploads/{{ u.id }}/live" hx-trigger="every 1s" hx-swap="outerHTML"{% endif %}>
+  <div id="progress-state" hidden
+       data-status="{{ progress.status }}" data-phase="{{ progress.phase }}" data-elapsed="{{ progress.elapsed }}"
+       data-parse-estimate="{{ progress.parse_estimate }}" data-save-estimate="{{ progress.save_estimate }}"
+       data-final="{{ 1 if progress.final else 0 }}"></div>
+  {% if final %}
+    {% include "_report.html" %}
+    {% if deletable %}
+      {% if confirm %}
+        <div class="confirm" role="alertdialog" aria-labelledby="confirm-text">
+          <p id="confirm-text">{{ t("confirm.delete_upload") }}</p>
+          <div class="btns">
+            <a class="btn-quiet" href="/uploads/{{ u.id }}" data-cancel autofocus>{{ t("rep.cancel") }}</a>
+            <form method="post" action="/uploads/{{ u.id }}/delete">
+              <input type="hidden" name="csrf_token" value="{{ csrf }}">
+              <button type="submit" class="btn-danger">{{ t("rep.del") }}</button>
+            </form>
+          </div>
+        </div>
+      {% else %}
+        <p><a class="icon-danger" href="/uploads/{{ u.id }}?confirm=delete" aria-label="{{ t('delete.upload') }}" title="{{ t('delete.upload') }}">{{ icon("trash", 17) }}</a>
+          <small class="muted">{{ t("delete.upload_help") }}</small></p>
+      {% endif %}
+    {% endif %}
+    {% if guest_locked %}
+      <p><span class="icon-danger" aria-disabled="true" role="img" aria-label="{{ t('delete.upload') }}" title="{{ t('guest.unavailable') }}">{{ icon("trash", 17) }}</span>
+        <small class="muted">{{ t("guest.unavailable") }}</small></p>
+    {% endif %}
+    {% if retryable %}
+      <form method="post" action="/uploads/{{ u.id }}/retry">
+        <input type="hidden" name="csrf_token" value="{{ csrf }}">
+        <button type="submit" class="primary">{{ t("report.retry") }}</button>
+      </form>
+    {% endif %}
+  {% else %}
+    <p class="muted small">{{ t("report.wait") }}</p>
+  {% endif %}
+</div>

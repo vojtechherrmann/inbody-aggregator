@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card narrow">
+  <h1>{{ code }}</h1>
+  <p>{{ t("error." ~ code) if t("error." ~ code) != "error." ~ code else t("error.generic") }}</p>
+  {% set contact = contact_text("error.contact", "error", code=code) %}
+  {% if contact %}<p>{{ contact }}</p>{% endif %}
+  <p><a href="/">{{ t("error.home") }}</a></p>
+</section>
+{% endblock %}
