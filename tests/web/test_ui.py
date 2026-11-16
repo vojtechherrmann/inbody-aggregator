@@ -477,7 +477,7 @@ def test_footer_name_links_to_the_homepage_and_the_landing_says_what_the_site_is
 
     html = anon.get("/").text
     assert '<a href="https://vojtah.cz" rel="noopener">VojtaH</a>' in html.split("<footer")[1]
-    assert "agregaci" in html and "kamarády nebo trenéry" in html
+    assert "sdílíme je s kamarády nebo trenéry" in html and "Sbíráme výsledky" in html
     en = anon.get("/", headers={"Accept-Language": "en"}).text
-    assert "share them with friends or trainers" in en
+    assert "follow them over time and share them with friends or trainers" in en
     assert config.CONTACT_EMAIL  # the tests run with a contact address
