@@ -517,7 +517,9 @@ def test_the_guest_sees_only_its_own_data(guest, as_user):
     page = guest.get("/history").text
     # nobody else to pick: the selector is a plain name (no dropdown listing anybody else)
     assert "<option" not in page and 'class="who-static"' in page and ">Host (já)<" in page
-    other_names = page.replace("github.com/vojtechherrmann/vojtah", "")  # the footer repo link
+    other_names = page.replace(
+        "github.com/vojtechherrmann/inbody-aggregator", ""
+    )  # the footer repo link
     assert "vojta" not in other_names and "bara" not in other_names
 
 

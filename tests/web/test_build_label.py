@@ -24,4 +24,7 @@ def test_footer_shows_the_build_label(anon, monkeypatch):
 
 def test_footer_links_to_the_public_repository(anon):
     page = anon.get("/").text
-    assert '<a href="https://github.com/vojtechherrmann/vojtah" rel="noopener">GitHub</a>' in page
+    assert (
+        '<a href="https://github.com/vojtechherrmann/inbody-aggregator" rel="noopener">GitHub</a>'
+        in page
+    )

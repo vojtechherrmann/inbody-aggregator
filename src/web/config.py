@@ -100,7 +100,7 @@ SESSION_TTL_SECONDS = 12 * 3600
 # ------------------------------------------------------------------------------- guest account
 # ONE shared, password-less, read-only account filled with fictional sample data
 # (scripts/seed_guest.py). Many visitors use it at once, each with their own session.
-GITHUB_URL = "https://github.com/vojtechherrmann/vojtah"  # footer link (public repo)
+GITHUB_URL = "https://github.com/vojtechherrmann/inbody-aggregator"  # footer link (public repo)
 GUEST_USER_ID = "guest"  # reserved: scripts/users.py refuses it, data.create_user needs guest=True
 GUEST_SESSION_TTL_SECONDS = 2 * 3600  # a guest session is short; logging out ends only that one
 GUEST_LOGIN_LIMITS_PER_IP = ((5, 60), (30, 3600))  # POST /login/guest, own bucket (not /login's)
