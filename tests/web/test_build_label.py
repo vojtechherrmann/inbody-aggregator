@@ -30,6 +30,6 @@ def test_footer_links_to_the_public_repository(anon):
     )
 
 
-def test_footer_name_links_to_the_homepage(anon):
+def test_footer_links_to_the_homepage(anon):
     page = anon.get("/").text
-    assert '<a href="https://vojtah.cz" rel="noopener">VojtaH</a>' in page
+    assert '<a href="https://vojtah.cz" rel="noopener">Homepage</a>' in page

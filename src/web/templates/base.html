@@ -89,7 +89,7 @@
    them below ~1500 px). Not announced, not focusable, no JS. #}
 <div class="quote quote-l q{{ quotes[0] }}" aria-hidden="true"><p>{{ t("quote." ~ quotes[0]) }}</p></div>
 <div class="quote quote-r q{{ quotes[1] }}" aria-hidden="true"><p>{{ t("quote." ~ quotes[1]) }}</p></div>
-<footer class="site-footer band">&copy; {{ current_year() }} <a href="{{ homepage_url }}" rel="noopener">VojtaH</a> · <a href="/data">{{ t("privacy.summary") }}</a> · <a href="{{ github_url }}" rel="noopener">GitHub</a> <span class="build">· {{ build_label() }}</span></footer>
+<footer class="site-footer band">&copy; {{ current_year() }} {{ contact_link("general", label="VojtaH") or "VojtaH" }} · <a href="{{ homepage_url }}" rel="noopener">Homepage</a> · <a href="/data">{{ t("privacy.summary") }}</a> · <a href="{{ github_url }}" rel="noopener">GitHub</a> <span class="build">· {{ build_label() }}</span></footer>
 {% block scripts %}{% endblock %}
 </body>
 </html>
