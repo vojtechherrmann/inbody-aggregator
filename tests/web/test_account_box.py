@@ -1,5 +1,5 @@
 """The account box in the app bar (the same look as the start page vojtah.cz): the user's name
-with a menu (Change password, Log out), the change-password dialog on every page, Login when
+with a menu (Change password, Sign out), the change-password dialog on every page, Login when
 anonymous."""
 
 from __future__ import annotations
@@ -45,6 +45,14 @@ def test_the_dialog_is_on_every_page_but_the_password_page(as_user):
     own = client.get("/account/password").text
     assert 'id="pw-dialog"' not in own
     assert 'id="pw-new"' in own and 'href="/history"' in own  # the same form, Cancel = back
+
+
+def test_english_labels_are_login_and_sign_out(as_user, anon):
+    """The same words as the start page vojtah.cz: Login and Sign out (never Log in / Log out)."""
+    page = as_user("bara").get("/history", headers={"Accept-Language": "en"}).text
+    assert "Sign out" in _box(page) and "Log out" not in page
+    front = anon.get("/data", headers={"Accept-Language": "en"}).text
+    assert '<a class="userbtn" href="/login">' in front and "Log in" not in front
 
 
 def test_log_out_from_the_menu_still_works(as_user):

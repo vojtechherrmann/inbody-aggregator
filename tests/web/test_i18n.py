@@ -36,7 +36,7 @@ def test_landing_is_bilingual_and_shows_the_contact(anon):
 def test_language_switch_sets_a_cookie_and_stays_on_site(anon):
     resp = anon.post("/lang", data={"lang": "en", "next": "/login", "csrf_token": csrf_of(anon)})
     assert resp.status_code == 303 and resp.headers["location"] == "/login"
-    assert "Log in" in anon.get("/login").text
+    assert "Login" in anon.get("/login").text and "Log in" not in anon.get("/login").text
     evil = anon.post(
         "/lang", data={"lang": "en", "next": "//evil.example", "csrf_token": csrf_of(anon)}
     )
