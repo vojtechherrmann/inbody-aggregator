@@ -5,7 +5,10 @@ Instead of leaving the browser on a blank tab for that minute, a request that ar
 database is "cold" (nothing succeeded for WARM_TTL) first starts a background warm-up (`SELECT 1`
 with retry) and waits FAST_WAIT seconds for it. If the database answers in time nobody notices;
 otherwise the visitor gets the "Starting the database" page (templates/dbwait.html), which polls
-`/dbstatus` and reloads the page as soon as the database is up. SQLite (local, tests) is always
+`/dbstatus` and reloads the page as soon as the database is up. A request that was let through
+as "warm" but cannot reach the database (an auto-pause the process did not notice: reset
+connection, login timeout) calls `mark_cold` and gets the same page (app.py `_database_unreachable`)
+instead of a 500. SQLite (local, tests) is always
 warm. In-process state only: one process, one replica."""
 
 from __future__ import annotations
@@ -44,6 +47,16 @@ def mark_warm() -> None:
     global _last_ok
     _last_ok = time.monotonic()
     _event.set()
+
+
+def mark_cold() -> None:
+    """A request could not reach the database (paused, resuming, or a connection reset right after
+    a resume): forget "warm" and start the warm-up, so the next request waits on the waiting page
+    instead of failing the same way."""
+    global _last_ok
+    _last_ok = float("-inf")
+    _event.clear()
+    ensure_warming()
 
 
 def _probe() -> None:

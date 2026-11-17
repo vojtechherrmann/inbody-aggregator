@@ -55,6 +55,7 @@ from markupsafe import Markup
 from ratelimit import limiter
 from security import User
 from sqlalchemy import select, update
+from sqlalchemy.exc import DBAPIError, InterfaceError, OperationalError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
@@ -500,6 +501,27 @@ async def _guest_read_only(request: Request, _exc: data.GuestReadOnly):
 @app.exception_handler(data.NotFound)
 async def _not_found(request: Request, _exc: data.NotFound):
     return render(request, "error.html", status_code=404, code=404)
+
+
+@app.exception_handler(DBAPIError)
+async def _database_unreachable(request: Request, exc: DBAPIError):
+    """The database dropped away DURING a request although `db_gate` let it through as warm (an
+    auto-pause / resume the process did not see: a reset connection, a login timeout). That is the
+    cold-database case, not a bug: mark it cold, start the warm-up and show the same "Starting the
+    database" page, which returns to the page by itself. Any other database error stays a 500."""
+    unreachable = isinstance(exc, (OperationalError, InterfaceError)) or exc.connection_invalidated
+    if not unreachable or not dbwarm.enabled():
+        raise exc
+    log.warning(
+        "database unreachable during %s %s: %s",
+        request.method,
+        request.url.path,
+        type(exc.orig).__name__ if exc.orig is not None else type(exc).__name__,
+    )
+    dbwarm.mark_cold()
+    if not hasattr(request.state, "lang"):
+        request.state.lang = i18n.DEFAULT
+    return _db_wait_page(request)
 
 
 # ---------------------------------------------------------------------------------- public pages

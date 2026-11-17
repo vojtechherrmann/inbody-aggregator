@@ -508,3 +508,50 @@ def test_dbstatus_is_readable_by_the_start_page_only(anon):
     other = anon.get("/dbstatus", headers={"Origin": "https://evil.example"})
     assert "access-control-allow-origin" not in other.headers
     assert "access-control-allow-origin" not in anon.get("/dbstatus").headers
+
+
+def test_a_database_that_drops_away_mid_request_shows_the_starting_page_not_a_500(
+    as_user, monkeypatch
+):
+    """db_gate thought the database was warm, but the query hit a paused / just-resumed database
+    (2026-11-17: TCP reset, then a login timeout -> Internal Server Error on POST /login)."""
+    import data
+    import dbwarm
+    from sqlalchemy.exc import OperationalError
+
+    vojta = as_user("vojta")
+    dbwarm.reset_for_tests()
+    monkeypatch.setattr(dbwarm, "enabled", lambda: True)
+    monkeypatch.setattr(dbwarm, "FAST_WAIT", 0.05)
+    dbwarm.mark_warm()  # the process believes it is warm
+    started = []
+    monkeypatch.setattr(dbwarm, "ensure_warming", lambda: started.append(1))
+
+    def unreachable(*_args, **_kwargs):
+        raise OperationalError("SELECT 1", {}, Exception("Login timeout expired"))
+
+    monkeypatch.setattr(data, "viewable_subjects", unreachable)
+    page = vojta.get("/history", headers={"Accept-Language": "en"})
+    assert page.status_code == 503 and page.headers["retry-after"] == "5"
+    assert "Starting the database, this can take up to a minute" in page.text
+    assert 'data-target="/history"' in page.text
+    assert not dbwarm.is_warm() and started  # marked cold, warm-up started
+
+
+def test_other_database_errors_are_still_500(as_user, monkeypatch):
+    """Only an unreachable database becomes the waiting page; a real error is not hidden."""
+    import data
+    import dbwarm
+    import pytest
+    from sqlalchemy.exc import IntegrityError
+
+    vojta = as_user("vojta")
+    monkeypatch.setattr(dbwarm, "enabled", lambda: True)
+    dbwarm.mark_warm()
+
+    def broken(*_args, **_kwargs):
+        raise IntegrityError("INSERT", {}, Exception("duplicate key"))
+
+    monkeypatch.setattr(data, "viewable_subjects", broken)
+    with pytest.raises(IntegrityError):  # TestClient re-raises what the app did not handle
+        vojta.get("/history")
