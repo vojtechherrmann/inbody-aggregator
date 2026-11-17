@@ -4,28 +4,15 @@
 -- (extraction/validate.py). Every statement is guarded, so re-running is harmless.
 -- The app's MI has SELECT/INSERT/UPDATE/DELETE on the whole schema (002): no new grants needed.
 --
--- App STATE (not derivable): app_user, user_session, share, api_usage.
+-- The ACCOUNTS (vojtah.app_user, vojtah.user_session, vojtah.sso_ticket) are the site's and are
+-- NOT created here: apply the site's vojtah_tables.sql first (the foreign keys below need them);
+-- the app's grants on them are in inbody_grant_web.sql.
+--
+-- App STATE (not derivable): share, api_usage.
 -- DERIVED from the raw files in blob (scripts/pipeline.py rebuild-index + reprocess):
 --   upload, extraction, measurement, measurement_conflict.
 -- measured_at_local is the LOCAL wall clock as printed/exported (never converted); the other
 -- *_at columns are UTC.
-
-IF OBJECT_ID('inbody.app_user', 'U') IS NULL
-CREATE TABLE inbody.app_user (
-	id VARCHAR(32) NOT NULL, 
-	is_admin BIT NOT NULL, 
-	is_disabled BIT NOT NULL, 
-	password_hash VARCHAR(255) NOT NULL, 
-	created_at DATETIME2(3) NOT NULL, 
-	password_changed_at DATETIME2(3) NOT NULL, 
-	last_login_at DATETIME2(3) NULL, 
-	failed_login_count INTEGER NOT NULL, 
-	last_failed_login_at DATETIME2(3) NULL, 
-	locked_until DATETIME2(3) NULL, 
-	password_admin_set BIT NOT NULL DEFAULT 0, 
-	PRIMARY KEY (id)
-);
-GO
 
 IF OBJECT_ID('inbody.api_usage', 'U') IS NULL
 CREATE TABLE inbody.api_usage (
@@ -42,7 +29,7 @@ CREATE TABLE inbody.api_usage (
 	cost_microusd BIGINT NOT NULL, 
 	created_at DATETIME2(3) NOT NULL, 
 	PRIMARY KEY (id), 
-	FOREIGN KEY(user_id) REFERENCES inbody.app_user (id)
+	FOREIGN KEY(user_id) REFERENCES vojtah.app_user (id)
 );
 GO
 
@@ -63,7 +50,7 @@ CREATE TABLE inbody.extra_usage (
 	note NVARCHAR(500) NULL, 
 	revoked_at DATETIME2(3) NULL, 
 	PRIMARY KEY (id), 
-	FOREIGN KEY(user_id) REFERENCES inbody.app_user (id)
+	FOREIGN KEY(user_id) REFERENCES vojtah.app_user (id)
 );
 GO
 
@@ -81,7 +68,7 @@ CREATE TABLE inbody.review_action (
 	note NVARCHAR(500) NULL, 
 	created_at DATETIME2(3) NOT NULL, 
 	PRIMARY KEY (id), 
-	FOREIGN KEY(admin_id) REFERENCES inbody.app_user (id)
+	FOREIGN KEY(admin_id) REFERENCES vojtah.app_user (id)
 );
 GO
 
@@ -97,8 +84,8 @@ CREATE TABLE inbody.share (
 	created_at DATETIME2(3) NOT NULL, 
 	revoked_at DATETIME2(3) NULL, 
 	PRIMARY KEY (owner_id, viewer_id), 
-	FOREIGN KEY(owner_id) REFERENCES inbody.app_user (id), 
-	FOREIGN KEY(viewer_id) REFERENCES inbody.app_user (id)
+	FOREIGN KEY(owner_id) REFERENCES vojtah.app_user (id), 
+	FOREIGN KEY(viewer_id) REFERENCES vojtah.app_user (id)
 );
 GO
 
@@ -142,7 +129,7 @@ CREATE TABLE inbody.upload (
 	updated_at DATETIME2(3) NOT NULL, 
 	PRIMARY KEY (id), 
 	CONSTRAINT [CK_upload_status] CHECK (status IN ('pending','processing','done','partial','nothing_new','needs_review','failed','skipped_budget','duplicate_file')), 
-	FOREIGN KEY(user_id) REFERENCES inbody.app_user (id)
+	FOREIGN KEY(user_id) REFERENCES vojtah.app_user (id)
 );
 GO
 
@@ -166,7 +153,7 @@ CREATE TABLE inbody.usage_allocation (
 	amount_microusd BIGINT NOT NULL, 
 	charged_at DATETIME2(3) NOT NULL, 
 	PRIMARY KEY (id), 
-	FOREIGN KEY(user_id) REFERENCES inbody.app_user (id)
+	FOREIGN KEY(user_id) REFERENCES vojtah.app_user (id)
 );
 GO
 
@@ -178,23 +165,6 @@ GO
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_usage_allocation_user'
                AND object_id = OBJECT_ID('inbody.usage_allocation'))
     CREATE INDEX [IX_usage_allocation_user] ON inbody.usage_allocation (user_id, charged_at);
-GO
-
-IF OBJECT_ID('inbody.user_session', 'U') IS NULL
-CREATE TABLE inbody.user_session (
-	id_hash VARCHAR(64) NOT NULL, 
-	user_id VARCHAR(32) NOT NULL, 
-	created_at DATETIME2(3) NOT NULL, 
-	expires_at DATETIME2(3) NOT NULL, 
-	revoked_at DATETIME2(3) NULL, 
-	PRIMARY KEY (id_hash), 
-	FOREIGN KEY(user_id) REFERENCES inbody.app_user (id)
-);
-GO
-
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name = 'IX_user_session_user'
-               AND object_id = OBJECT_ID('inbody.user_session'))
-    CREATE INDEX [IX_user_session_user] ON inbody.user_session (user_id);
 GO
 
 IF OBJECT_ID('inbody.extraction', 'U') IS NULL
@@ -365,7 +335,7 @@ CREATE TABLE inbody.extraction (
 	created_at DATETIME2(3) NOT NULL, 
 	PRIMARY KEY (id), 
 	FOREIGN KEY(upload_id) REFERENCES inbody.upload (id), 
-	FOREIGN KEY(user_id) REFERENCES inbody.app_user (id)
+	FOREIGN KEY(user_id) REFERENCES vojtah.app_user (id)
 );
 GO
 
@@ -544,7 +514,7 @@ CREATE TABLE inbody.measurement (
 	deleted_at DATETIME2(3) NULL, 
 	deleted_by VARCHAR(64) NULL, 
 	PRIMARY KEY (id), 
-	FOREIGN KEY(user_id) REFERENCES inbody.app_user (id), 
+	FOREIGN KEY(user_id) REFERENCES vojtah.app_user (id), 
 	FOREIGN KEY(upload_id) REFERENCES inbody.upload (id)
 );
 GO

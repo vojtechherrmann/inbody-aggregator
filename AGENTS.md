@@ -137,6 +137,16 @@ Root holds only README / AGENTS / CLAUDE / AZURE. No new `.md` files in the root
   spend); the user is never told about the cache, the earlier upload or the archive.
   `scripts/pipeline.py restore <upload_id>` un-deletes a mistake. Shared viewers can never delete
   (`can_edit`).
+- **Accounts are the site's** (since 2026-11-17): `app_user`, `user_session` and `sso_ticket` live
+  in schema `vojtah`, created and owned by the site (private repository `vojtah-internal`); this
+  app declares them in `db.py` (`USERS_SCHEMA`), they are NOT in `inbody_tables.sql`, and its
+  identity has object grants on exactly these three (`inbody_grant_web.sql`). One account and one
+  password for vojtah.cz and this app; `scripts/users.py` here and the site's users CLI edit the
+  same rows. **Single sign-on:** a visitor signed in on vojtah.cz is sent to `GET /sso?t=<ticket>`
+  with a one-time ticket the site's API minted (60 s, sha256 at rest); `security.redeem_sso_ticket`
+  burns it in the checking UPDATE, the route requires `Sec-Fetch-Site: same-site` (no login CSRF
+  through a planted link), an enabled non-guest account, and starts a normal session (replacing
+  the previous one); anything wrong = the login page. Tests: `tests/web/test_sso.py`.
 - **Passwords from the admin:** `scripts/users.py add` / `reset-password` set
   `app_user.password_admin_set = 1`; a self-service change clears it. While it is 1, login lands
   on `/history?notice=notice.password_admin_set` (a recommendation with a link, never blocking).

@@ -45,7 +45,7 @@ import storage
 import uploads
 import views
 import worker
-from fastapi import APIRouter, Depends, FastAPI, File, Form, Request, UploadFile
+from fastapi import APIRouter, Depends, FastAPI, File, Form, Query, Request, UploadFile
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -637,6 +637,40 @@ def login_guest(request: Request):
     log.info("guest login ip=%s", request.state.ip)
     response = redirect("/history")
     _set_session_cookie(response, cookie, config.GUEST_USER_ID)
+    _set_csrf_cookie(response, security.new_csrf_token())  # rotate on privilege change
+    return response
+
+
+SSO_SITES = {"same-site", "same-origin"}
+
+
+@public.get("/sso")
+def sso(request: Request, t: Annotated[str, Query(max_length=security.SSO_TICKET_MAX_LEN)] = ""):
+    """Single sign-on from vojtah.cz (accounts are shared, see db.py): redeem the one-time ticket
+    the site's API minted for the signed-in visitor and start a normal session here. Anything
+    wrong (no / used / expired ticket, disabled account) just lands on the login page.
+
+    Only a navigation that starts on our own site (Sec-Fetch-Site same-site, i.e. vojtah.cz) may
+    redeem: a ticket planted in a link on another site cannot sign a victim into the planter's
+    account (login CSRF). A browser that sends no Sec-Fetch-Site falls back to the login page."""
+    if not limiter.hit(f"login:{request.state.ip}", config.LOGIN_LIMITS_PER_IP):
+        return redirect("/login")
+    if request.headers.get("sec-fetch-site") not in SSO_SITES:
+        log.info("sso refused (not same-site) ip=%s", request.state.ip)
+        return redirect("/login")
+    with db.engine().begin() as conn:
+        uid = security.redeem_sso_ticket(conn, t)
+        if uid is None:
+            log.info("sso ticket rejected ip=%s", request.state.ip)
+            return redirect("/login")
+        security.revoke_session(conn, request.cookies.get(config.SESSION_COOKIE))
+        conn.execute(
+            update(db.app_user).where(db.app_user.c.id == uid).values(last_login_at=db.utcnow())
+        )
+        cookie = security.create_session(conn, uid)
+    log.info("sso login ip=%s", request.state.ip)
+    response = redirect("/history")
+    _set_session_cookie(response, cookie, uid)
     _set_csrf_cookie(response, security.new_csrf_token())  # rotate on privilege change
     return response
 

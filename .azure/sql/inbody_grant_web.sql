@@ -1,4 +1,5 @@
--- Grant the vhgwc-inbody-web container app's managed identity read/write on schema `inbody`.
+-- Grant the vhgwc-inbody-web container app's managed identity read/write on schema `inbody` and on
+-- the site's account tables (schema `vojtah`).
 --
 -- Run as the Entra admin against db `vojtah`, AFTER the container app exists (its system-assigned
 -- managed identity must already be in Entra). Not part of 001 because the principal does not exist
@@ -22,4 +23,12 @@ GO
 
 -- Schema-scoped, not db_datareader/db_datawriter: the app owns `inbody` and nothing else.
 GRANT SELECT, INSERT, UPDATE, DELETE, EXECUTE ON SCHEMA::inbody TO [vhgwc-inbody-web];
+GO
+
+-- The site's ACCOUNTS (schema vojtah, owned by the site; see src/web/db.py): object grants only,
+-- nothing else of schema vojtah (its project list stays invisible to this app). Run after the
+-- site's vojtah_tables.sql has created them.
+GRANT SELECT, INSERT, UPDATE, DELETE ON vojtah.app_user TO [vhgwc-inbody-web];
+GRANT SELECT, INSERT, UPDATE, DELETE ON vojtah.user_session TO [vhgwc-inbody-web];
+GRANT SELECT, UPDATE ON vojtah.sso_ticket TO [vhgwc-inbody-web];
 GO

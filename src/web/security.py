@@ -171,6 +171,45 @@ def revoke_all_sessions(conn, user_id: str) -> None:
     )
 
 
+# ------------------------------------------------------------------------------ single sign-on
+# A visitor signed in on vojtah.cz opens this app without a second login: the site's API mints a
+# random one-time ticket (only its sha256 is stored in vojtah.sso_ticket, valid for a minute) and
+# the start page navigates to GET /sso?t=<ticket>. Redeeming marks it used in the same UPDATE that
+# checks it, so a ticket works once, for this app only, while the account is enabled.
+
+SSO_AUDIENCE = "inbody"
+SSO_TICKET_MAX_LEN = 128
+
+
+def redeem_sso_ticket(conn, ticket: str | None) -> str | None:
+    """The user id behind an unused, unexpired ticket for this app (and burn it), else None."""
+    if not ticket or len(ticket) > SSO_TICKET_MAX_LEN:
+        return None
+    now = db.utcnow()
+    id_hash = hashlib.sha256(ticket.encode()).hexdigest()
+    t = db.sso_ticket
+    burned = conn.execute(
+        update(t)
+        .where(
+            t.c.id_hash == id_hash,
+            t.c.audience == SSO_AUDIENCE,
+            t.c.used_at.is_(None),
+            t.c.expires_at > now,
+        )
+        .values(used_at=now)
+    )
+    if burned.rowcount != 1:
+        return None
+    row = conn.execute(
+        select(db.app_user.c.id)
+        .select_from(t.join(db.app_user))
+        .where(t.c.id_hash == id_hash, db.app_user.c.is_disabled == False)  # noqa: E712
+    ).first()
+    if row is None or row.id == config.GUEST_USER_ID:  # the guest never signs in on the site
+        return None
+    return row.id
+
+
 # ----------------------------------------------------------------------------------------- CSRF
 # Signed double-submit token (OWASP): a random value, signed with the server key, lives in a
 # __Host- cookie; every unsafe request must echo it in a form field or the X-CSRF-Token header.

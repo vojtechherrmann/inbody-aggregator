@@ -5,12 +5,17 @@ Two kinds of tables: app STATE (users, sessions, shares, spend) and data DERIVED
 files in blob (upload, extraction, measurement) -- the latter can be
 dropped and rebuilt from blob at any time (`scripts/pipeline.py`).
 
-* `azure`  -- Azure SQL `inbody` on vhgwcsql1, Entra-only: an access token from
+* `azure`  -- Azure SQL `vojtah` on vhgwcsql1, Entra-only: an access token from
   DefaultAzureCredential (managed identity in the container, az CLI locally) is handed to the
   ODBC driver on every new connection. Tables come from `.azure/sql/inbody_tables.sql`, which
   `tests/web/test_schema_sync.py` keeps in step with this metadata.
 
-All tables live in schema `inbody`; on SQLite the schema is translated away.
+This app's tables live in schema `inbody`. The ACCOUNTS are the site's: `app_user`,
+`user_session` and `sso_ticket` live in schema `vojtah` (one account = one password for vojtah.cz
+and this app; a password change or a disabled account ends the sessions of both). They are
+created and owned by the site (the private repository vojtah-internal); they are declared here
+with the same shape so the app can query them and SQLite tests can create them. On SQLite both
+schemas are translated away.
 """
 
 from __future__ import annotations
@@ -53,7 +58,9 @@ CLOCK = Time().with_variant(TIME(0), "mssql")
 Text = UnicodeText().with_variant(NVARCHAR(), "mssql")  # NVARCHAR(max), never NTEXT
 
 SCHEMA = "inbody"
+USERS_SCHEMA = "vojtah"  # the site's accounts (see the module docstring); not in inbody_tables.sql
 metadata = MetaData(schema=SCHEMA)
+USER_FK = f"{USERS_SCHEMA}.app_user.id"
 
 app_user = Table(
     "app_user",
@@ -71,24 +78,44 @@ app_user = Table(
     # The current password was assigned by the admin (scripts/users.py add / reset-password);
     # a self-service change clears it. While set, login shows a (non-blocking) recommendation.
     Column("password_admin_set", Boolean, nullable=False, default=False, server_default=FALSE),
+    schema=USERS_SCHEMA,
 )
 
+# Sessions of BOTH apps (each finds only its own: the cookie is signed with the app's own key and
+# only the sha256 of the session id is stored).
 user_session = Table(
     "user_session",
     metadata,
     Column("id_hash", String(64), primary_key=True),  # sha256 of the cookie's session id
-    Column("user_id", String(32), ForeignKey(f"{SCHEMA}.app_user.id"), nullable=False),
+    Column("user_id", String(32), ForeignKey(USER_FK), nullable=False),
     Column("created_at", TS, nullable=False),
     Column("expires_at", TS, nullable=False),
     Column("revoked_at", TS, nullable=True),
     Index("IX_user_session_user", "user_id"),
+    schema=USERS_SCHEMA,
+)
+
+# Single sign-on from vojtah.cz: the site's API mints a one-time ticket for a signed-in user
+# (only the sha256 is stored, valid for a minute), the start page sends the browser to
+# GET /sso?t=<ticket>, and this app redeems it once (security.redeem_sso_ticket).
+sso_ticket = Table(
+    "sso_ticket",
+    metadata,
+    Column("id_hash", String(64), primary_key=True),  # sha256 of the ticket
+    Column("user_id", String(32), ForeignKey(USER_FK), nullable=False),
+    Column("audience", String(16), nullable=False),  # the app it is for ("inbody")
+    Column("created_at", TS, nullable=False),
+    Column("expires_at", TS, nullable=False),
+    Column("used_at", TS, nullable=True),
+    Index("IX_sso_ticket_expires", "expires_at"),
+    schema=USERS_SCHEMA,
 )
 
 share = Table(
     "share",
     metadata,
-    Column("owner_id", String(32), ForeignKey(f"{SCHEMA}.app_user.id"), primary_key=True),
-    Column("viewer_id", String(32), ForeignKey(f"{SCHEMA}.app_user.id"), primary_key=True),
+    Column("owner_id", String(32), ForeignKey(USER_FK), primary_key=True),
+    Column("viewer_id", String(32), ForeignKey(USER_FK), primary_key=True),
     Column("created_at", TS, nullable=False),
     Column("revoked_at", TS, nullable=True),  # NULL = active
     Index("IX_share_viewer", "viewer_id"),
@@ -100,7 +127,7 @@ upload = Table(
     "upload",
     metadata,
     Column("id", String(36), primary_key=True),  # uuid4, also in the blob path
-    Column("user_id", String(32), ForeignKey(f"{SCHEMA}.app_user.id"), nullable=False),
+    Column("user_id", String(32), ForeignKey(USER_FK), nullable=False),
     Column("kind", String(8), nullable=False),  # pdf | jpg | png | csv (from magic bytes)
     Column("original_name", Unicode(255), nullable=False),
     Column("blob_path", String(400), nullable=False),  # raw/<user_id>/<yyyy-mm>/<uuid>-<name>
@@ -178,7 +205,7 @@ extraction = Table(
     metadata,
     Column("id", String(36), primary_key=True),
     Column("upload_id", String(36), ForeignKey(f"{SCHEMA}.upload.id"), nullable=False),
-    Column("user_id", String(32), ForeignKey(f"{SCHEMA}.app_user.id"), nullable=False),
+    Column("user_id", String(32), ForeignKey(USER_FK), nullable=False),
     *_canonical_columns(),
     Column("checks_json", Text, nullable=False),  # {invalid, errors, warnings} of the app's checks
     Column("accepted", Boolean, nullable=False),
@@ -199,7 +226,7 @@ measurement = Table(
     "measurement",
     metadata,
     Column("id", String(36), primary_key=True),
-    Column("user_id", String(32), ForeignKey(f"{SCHEMA}.app_user.id"), nullable=False),
+    Column("user_id", String(32), ForeignKey(USER_FK), nullable=False),
     Column("upload_id", String(36), ForeignKey(f"{SCHEMA}.upload.id"), nullable=False),
     *_canonical_columns(),
     Column("created_at", TS, nullable=False),
@@ -222,7 +249,7 @@ review_action = Table(
     metadata,
     Column("id", String(36), primary_key=True),
     Column("upload_id", String(36), nullable=False),
-    Column("admin_id", String(32), ForeignKey(f"{SCHEMA}.app_user.id"), nullable=False),
+    Column("admin_id", String(32), ForeignKey(USER_FK), nullable=False),
     Column("action", String(16), nullable=False),  # approve | reject | reprocess
     Column("note", Unicode(500), nullable=True),
     Column("created_at", TS, nullable=False),
@@ -237,7 +264,7 @@ extra_usage = Table(
     "extra_usage",
     metadata,
     Column("id", String(36), primary_key=True),
-    Column("user_id", String(32), ForeignKey(f"{SCHEMA}.app_user.id"), nullable=False),
+    Column("user_id", String(32), ForeignKey(USER_FK), nullable=False),
     Column("amount_usd", Float, nullable=False),
     Column("valid_from", TS, nullable=False),
     Column("valid_until", TS, nullable=False),
@@ -255,7 +282,7 @@ usage_allocation = Table(
     metadata,
     Column("id", String(36), primary_key=True),
     Column("api_usage_id", String(36), nullable=False),
-    Column("user_id", String(32), ForeignKey(f"{SCHEMA}.app_user.id"), nullable=False),
+    Column("user_id", String(32), ForeignKey(USER_FK), nullable=False),
     Column("bucket", String(8), nullable=False),  # base | extra
     Column("extra_usage_id", String(36), nullable=True),
     Column("amount_microusd", BigInteger, nullable=False),
@@ -270,7 +297,7 @@ api_usage = Table(
     "api_usage",
     metadata,
     Column("id", String(36), primary_key=True),
-    Column("user_id", String(32), ForeignKey(f"{SCHEMA}.app_user.id"), nullable=False),
+    Column("user_id", String(32), ForeignKey(USER_FK), nullable=False),
     Column("upload_id", String(36), nullable=True),  # no FK: spend outlives a deleted upload row
     Column("model", String(64), nullable=False),
     Column("request_id", String(128), nullable=True),
@@ -323,7 +350,7 @@ def sqlite_engine(path: str) -> Engine:
     engine = create_engine(
         f"sqlite:///{path}",
         connect_args={"check_same_thread": False},
-        execution_options={"schema_translate_map": {SCHEMA: None}},
+        execution_options={"schema_translate_map": {SCHEMA: None, USERS_SCHEMA: None}},
     )
 
     @event.listens_for(engine, "connect")
