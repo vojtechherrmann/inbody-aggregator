@@ -529,7 +529,6 @@
  "contact.subject.error": "InBody: chyba {code}",
  "error.contact": "Něco nefunguje? {contact}",
  "privacy.delete": "Pokud chceš svá data opravdu smazat: {contact}",
- "db.starting": "Spouští se databáze, může to trvat až minutu. Stránka se načte sama.",
  "db.starting_title": "Spouštíme databázi",
- "db.starting_text": "Databáze po delší nečinnosti usíná, aby nic nestála. Až se probudí, stránka se načte sama."
+ "db.starting_text": "Databáze po delší nečinnosti usíná, aby nic nestála. Probuzení může trvat až minutu, stránka se pak načte sama."
 }

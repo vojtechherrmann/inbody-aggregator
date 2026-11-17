@@ -432,11 +432,9 @@ def test_a_cold_database_shows_the_starting_page_then_the_real_page(as_user, ano
     dbwarm, release = _cold_database(monkeypatch)
     page = vojta.get("/history?subject=vojta", headers={"Accept-Language": "en"})
     assert page.status_code == 503 and page.headers["retry-after"] == "5"
-    assert "Starting the database, this can take up to a minute" in page.text
-    assert (
-        'class="band db-banner"' in page.text
-        and 'data-target="/history?subject=vojta"' in page.text
-    )
+    assert "Waking it up can take up to a minute" in page.text
+    assert page.text.count("Starting the database") == 2  # <title> + the heading, said once
+    assert "db-banner" not in page.text and 'data-target="/history?subject=vojta"' in page.text
     assert "/static/dbwait.js" in page.text and " style=" not in page.text
     assert vojta.get("/dbstatus").json() == {"warm": False, "session": True}
     # anonymous pages need no database: shown at once; /healthz never waits either
@@ -533,7 +531,7 @@ def test_a_database_that_drops_away_mid_request_shows_the_starting_page_not_a_50
     monkeypatch.setattr(data, "viewable_subjects", unreachable)
     page = vojta.get("/history", headers={"Accept-Language": "en"})
     assert page.status_code == 503 and page.headers["retry-after"] == "5"
-    assert "Starting the database, this can take up to a minute" in page.text
+    assert "Waking it up can take up to a minute" in page.text
     assert 'data-target="/history"' in page.text
     assert not dbwarm.is_warm() and started  # marked cold, warm-up started
 

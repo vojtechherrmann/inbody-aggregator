@@ -529,7 +529,6 @@
  "contact.subject.error": "InBody: error {code}",
  "error.contact": "Something not working? {contact}",
  "privacy.delete": "If you want your data deleted for real: {contact}",
- "db.starting": "Starting the database, this can take up to a minute. The page will load on its own.",
  "db.starting_title": "Starting the database",
- "db.starting_text": "The database sleeps after a long idle time to save cost. When it wakes up, the page loads by itself."
+ "db.starting_text": "The database sleeps after a long idle time to save cost. Waking it up can take up to a minute; the page then loads by itself."
 }

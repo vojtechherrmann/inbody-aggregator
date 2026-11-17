@@ -414,9 +414,7 @@ li.pw-ok, [data-pw-ok="true"] { color: var(--good); }
 .quote p { font-family: "Saira", system-ui, sans-serif; font-weight: 500; font-size: .76em; text-transform: uppercase; letter-spacing: .09em; padding-left: .8em; border-left: 3px solid var(--brand-red); text-align: left; }
 .quote p::before { left: .25em; transform: none; }
 
-/* ---- "Starting the database" (templates/dbwait.html): the amber strip like the guest banner + dots */
-.db-banner { background: color-mix(in srgb, var(--warn-text) 16%, var(--page)); border-bottom: 1px solid color-mix(in srgb, var(--warn-text) 40%, var(--page)); color: var(--ink); font-size: 14px; font-weight: 600; padding-block: 9px; }
-.db-banner .inner { display: flex; align-items: center; justify-content: center; text-align: center; }
+/* ---- "Starting the database" (templates/dbwait.html): the message once, then the dots */
 .db-dots { display: flex; gap: 8px; margin: 18px 0 0; }
 .db-dots span { width: 9px; height: 9px; border-radius: 50%; background: var(--warn-text); opacity: .25; animation: db-pulse 1.2s infinite ease-in-out; }
 .db-dots span:nth-child(2) { animation-delay: .2s; }

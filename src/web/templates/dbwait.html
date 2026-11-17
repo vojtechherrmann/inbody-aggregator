@@ -17,11 +17,10 @@
     <a href="/" class="brand" aria-label="{{ t('app.name') }}"><b>InBody</b> <span>Aggregator</span></a>
   </div>
 </header>
-<div class="band db-banner" role="status" aria-live="polite"><div class="inner">{{ t("db.starting") }}</div></div>
 <div class="band">
   <div class="inner">
     <main id="dbwait" data-target="{{ target }}" data-status="/dbstatus">
-      <section class="hero">
+      <section class="hero" role="status" aria-live="polite">
         <h1>{{ t("db.starting_title") }}</h1>
         <p>{{ t("db.starting_text") }}</p>
         <p class="db-dots" aria-hidden="true"><span></span><span></span><span></span></p>
