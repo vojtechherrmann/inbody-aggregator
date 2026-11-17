@@ -47,3 +47,47 @@
   <span class="rb-text">{{ b.text }}</span>
 </div>{% endif %}
 {%- endmacro %}
+
+{# The account box (same look as the start page vojtah.cz): a round user icon, the name, a chevron. #}
+{% macro usericon() -%}
+<svg class="usericon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7z"/></svg>
+{%- endmacro %}
+{% macro chev() -%}
+<svg class="chev" viewBox="0 0 12 12" aria-hidden="true"><path d="M2 4.5 6 8.5 10 4.5"/></svg>
+{%- endmacro %}
+
+{# The change-password form: in the dialog every page has (base.html) and on /account/password (no
+   JavaScript, or a refused change). `p` prefixes the ids so both can never clash. A plain POST: the
+   server is the authority, pwtoggle.js only marks the rules live. Never pre-filled. #}
+{% macro pw_form(p, title_id, min_length, cancel_href=None, notice=None, errors=None) -%}
+<form method="post" action="/account/password" class="pw-form" autocomplete="on">
+  <h2 id="{{ title_id }}">{{ t("account.pw.title") }}</h2>
+  {% if notice %}<p class="notice" role="status">{{ t(notice) }}</p>{% endif %}
+  {% if errors %}<div class="notice error" role="alert">{% for e in errors %}<p>{{ t(e, n=min_length) }}</p>{% endfor %}</div>{% endif %}
+  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+  {# For password managers: the account the new password belongs to. #}
+  <input type="text" name="username" value="{{ user.id }}" autocomplete="username" class="visually-hidden" tabindex="-1" aria-hidden="true" readonly>
+  <label for="{{ p }}-current">{{ t("account.pw.current") }}</label>
+  <input id="{{ p }}-current" name="current_password" type="password" autocomplete="current-password" required maxlength="1024">
+  <label for="{{ p }}-new">{{ t("account.pw.new") }}</label>
+  <input id="{{ p }}-new" name="new_password" type="password" autocomplete="new-password" required minlength="{{ min_length }}" maxlength="1024" aria-describedby="{{ p }}-rules">
+  <label for="{{ p }}-repeat">{{ t("account.pw.repeat") }}</label>
+  <input id="{{ p }}-repeat" name="new_password_repeat" type="password" autocomplete="new-password" required maxlength="1024" aria-describedby="{{ p }}-match">
+  <div id="{{ p }}-rules" class="rules">
+    <p>{{ t("account.pw.rules") }}</p>
+    <ul data-pw-rules-for="{{ p }}-new">
+      <li data-rule="length">{{ t("account.pw.rule.length", n=min_length) }}</li>
+      <li data-rule="upper">{{ t("account.pw.rule.upper") }}</li>
+      <li data-rule="lower">{{ t("account.pw.rule.lower") }}</li>
+      <li data-rule="digit">{{ t("account.pw.rule.digit") }}</li>
+    </ul>
+  </div>
+  <p id="{{ p }}-match" class="rules" data-pw-match="{{ p }}-new {{ p }}-repeat" data-rule="match" hidden>{{ t("account.pw.rule.match") }}</p>
+  <p class="rules">{{ t("account.pw.effect") }}</p>
+  <div class="dlg-actions">
+    <button type="submit" class="btn-brand">{{ t("account.pw.submit") }}</button>
+    {% if cancel_href %}<a class="linkbtn" href="{{ cancel_href }}">{{ t("common.cancel") }}</a>
+    {% else %}<button type="button" class="linkbtn" data-close-dialog>{{ t("common.cancel") }}</button>{% endif %}
+  </div>
+</form>
+{%- endmacro %}

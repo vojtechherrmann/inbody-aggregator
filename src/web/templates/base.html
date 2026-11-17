@@ -1,4 +1,4 @@
-{% from "_ui.html" import icon %}<!doctype html>
+{% from "_ui.html" import icon, usericon, chev %}{% from "_ui.html" import pw_form with context %}<!doctype html>
 <html lang="{{ lang }}"{% if theme %} data-theme="{{ theme }}"{% endif %}>
 <head>
   <meta charset="utf-8">
@@ -55,14 +55,20 @@
               <label><input type="radio" name="energy" value="kJ" {% if settings.energy == "kJ" %}checked{% endif %}> kJ</label>
             </fieldset>
             <button type="submit" class="btn-quiet settings-save">{{ t("settings.save") }}</button>
-            {% if not is_guest %}<a class="menu-link" href="/account/password">{{ t("settings.password") }}</a>{% endif %}
           </form>
         </details>
         {% if user.is_admin %}<a class="ghost" href="/admin">{{ t("nav.admin") }}</a>{% endif %}
-        <form method="post" action="/logout" class="inline">
-          <input type="hidden" name="csrf_token" value="{{ csrf }}">
-          <button type="submit" class="ghost">{{ t("nav.logout") }}</button>
-        </form>
+        {# The account box (the start page vojtah.cz has the same): Change password, Log out. #}
+        <details class="menu usermenu">
+          <summary class="userbtn" aria-label="{{ t('nav.account') }}: {{ user.id }}">{{ usericon() }}<span class="userbtn-name">{{ user.id }}</span>{{ chev() }}</summary>
+          <div class="usermenu-panel">
+            {% if not is_guest %}<a class="menuitem" href="/account/password" data-open-dialog="pw-dialog">{{ t("settings.password") }}</a>{% endif %}
+            <form method="post" action="/logout">
+              <input type="hidden" name="csrf_token" value="{{ csrf }}">
+              <button type="submit" class="menuitem">{{ t("nav.logout") }}</button>
+            </form>
+          </div>
+        </details>
       {% else %}
         <form method="post" action="/lang" class="inline lang-switch">
           <input type="hidden" name="csrf_token" value="{{ csrf }}">
@@ -72,6 +78,7 @@
                     {% if code == lang %}aria-current="true"{% endif %}>{{ code | upper }}</button>
           {% endfor %}
         </form>
+        {% if request.url.path != "/login" %}<a class="userbtn" href="/login">{{ usericon() }}<span>{{ t("login.submit") }}</span></a>{% endif %}
       {% endif %}
     </div>
   </div>
@@ -91,6 +98,13 @@
 <div class="quote quote-l q{{ quotes[0] }}" aria-hidden="true"><p>{{ t("quote." ~ quotes[0]) }}</p></div>
 <div class="quote quote-r q{{ quotes[1] }}" aria-hidden="true"><p>{{ t("quote." ~ quotes[1]) }}</p></div>
 <footer class="site-footer band">&copy; {{ current_year() }} {{ contact_link("general", label="VojtaH") or "VojtaH" }} · <a href="{{ homepage_url }}" rel="noopener">Homepage</a> · <a href="/data">{{ t("privacy.summary") }}</a> · <a href="{{ github_url }}" rel="noopener">GitHub</a> <span class="build">· {{ build_label() }}</span></footer>
+{% if user and not is_guest and request.url.path != "/account/password" %}
+{# Change password without leaving the page (shell.js opens it; without JavaScript the menu item
+   is a plain link to /account/password, which renders the same form). #}
+<dialog id="pw-dialog" class="dlg" aria-labelledby="pw-dialog-title">
+  {{ pw_form("pwd", "pw-dialog-title", password_min_length) }}
+</dialog>
+{% endif %}
 {% block scripts %}{% endblock %}
 </body>
 </html>

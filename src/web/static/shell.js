@@ -3,6 +3,8 @@
    * the Viewing selector and the Settings form submit on change;
    * app-bar dropdowns (<details>) close on Esc or an outside click;
    * an in-page confirmation (.confirm) cancels on Esc;
+   * a link with data-open-dialog="<id>" opens that <dialog> instead (Change password in the account
+     menu; the link itself is the no-JavaScript way), [data-close-dialog] closes it, closing wipes it;
    * the "not optimised for mobile" strip can be dismissed (remembered in localStorage);
    * range-bar tick labels that would overlap are hidden. */
 (function () {
@@ -25,6 +27,31 @@
       t.form.requestSubmit ? t.form.requestSubmit() : t.form.submit();
     }
   });
+
+  document.addEventListener("click", ev => {
+    const opener = ev.target.closest && ev.target.closest("[data-open-dialog]");
+    if (opener) {
+      const dlg = document.getElementById(opener.getAttribute("data-open-dialog"));
+      if (!dlg || typeof dlg.showModal !== "function") return;   // old browser: follow the link
+      ev.preventDefault();
+      closeMenus(null);
+      dlg.showModal();
+      const first = dlg.querySelector("input:not([type=hidden]):not([readonly])");
+      if (first) first.focus();
+      return;
+    }
+    const closer = ev.target.closest && ev.target.closest("[data-close-dialog]");
+    if (closer && closer.closest("dialog")) closer.closest("dialog").close();
+  });
+  // a closed dialog keeps no password: every field is wiped (the live rule marks follow on input)
+  document.addEventListener("close", ev => {
+    const dlg = ev.target;
+    if (!(dlg instanceof HTMLDialogElement)) return;
+    dlg.querySelectorAll('input[type="password"], input[type="text"]:not([readonly])').forEach(i => {
+      i.value = "";
+      i.dispatchEvent(new Event("input", { bubbles: true }));
+    });
+  }, true);
 
   const POPS = "details.menu, details.ibc-info";   // app-bar dropdowns + the ⓘ boxes
   function closeMenus(except) {
