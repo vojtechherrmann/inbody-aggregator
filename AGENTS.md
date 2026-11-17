@@ -166,7 +166,9 @@ Root holds only README / AGENTS / CLAUDE / AZURE. No new `.md` files in the root
   HEAD that arrives under another host name to it (path + query kept; `/healthz`, `/dbstatus` exempt).
   The planned move to `inbody.vojtah.cz` is `.azure/services/custom-domain.ps1` (see `AZURE.md`).
 - **Day rule:** one measurement per user per day, first come wins; times are informational and
-  never converted or "fixed".
+  never converted or "fixed". **Enrichment:** a later file for the same day fills only the values the
+  day's measurement is missing (NULL), when it matches the same measurement (`daycheck.enrich`,
+  `docs/upload-pipeline.md` section 3); it never overwrites.
 
 ## Development
 

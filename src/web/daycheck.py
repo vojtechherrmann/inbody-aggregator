@@ -5,7 +5,11 @@
 * Inside one upload, several extractions on the same day: a full measurement beats a history
   point, then the earliest printed time; the rest -> REJECTED `same_day_in_file`.
 * Across uploads: if the user already has a measurement that day -> REJECTED `day_exists`.
-  Nothing is merged, enriched or overwritten.
+  The day's measurement is never replaced or overwritten, BUT (user decision 2026-11-17) a
+  rejected full extraction that looks like the same measurement (`_same_measurement`) ENRICHES it:
+  values the day is missing (NULL) are filled in from it, in upload order, never overwriting a value
+  that is already there (`enrich`). The extraction stays rejected; `Decision.enriched` lists the
+  fields it supplied.
 * Every extraction row is kept (accepted / reject_reason / conflicting_measurement_id);
   `measurement` holds the accepted ones, with id = the accepted extraction's id.
 * Deterministic rebuild: replay ALL of the user's extractions in upload order
@@ -65,6 +69,7 @@ class Decision:
     accepted: bool
     reason: str | None = None
     conflicting_id: str | None = None
+    enriched: tuple[str, ...] = ()  # canonical fields this (rejected) extraction filled in
 
 
 def load(conn, user_id: str) -> list[Ext]:
@@ -114,11 +119,92 @@ def decide(exts: list[Ext]) -> dict[str, Decision]:
     return out
 
 
+# What never travels between two files of the same day: identity, provenance and parser details.
+ENRICH_EXCLUDED = frozenset(
+    {
+        "measured_date",
+        "measured_time",
+        "origin",
+        "from_history",
+        "parser_version",
+        "source_name",
+        "device_model",
+        "device_serial",
+        "software_version",
+        "sheet_template",
+        "sheet_language",
+        "source_unit_system",
+        "converted_from",
+        "warnings",
+    }
+)
+ENRICHABLE = [c for c in CANONICAL if c not in ENRICH_EXCLUDED]
+# Two files are "the same measurement" only if what both print agrees (same day can also hold two
+# real measurements). At least one of these must be present in both, all present ones within 2 %.
+SAME_FIELDS = (
+    "weight_kg",
+    "skeletal_muscle_mass_kg",
+    "body_fat_mass_kg",
+    "total_body_water_l",
+    "percent_body_fat",
+)
+SAME_TOLERANCE = 0.02
+
+
+def _same_measurement(base: dict, donor: dict) -> bool:
+    compared = 0
+    for f in SAME_FIELDS:
+        a, b = base.get(f), donor.get(f)
+        if a is None or b is None:
+            continue
+        a, b = float(a), float(b)
+        compared += 1
+        if abs(a - b) > SAME_TOLERANCE * max(abs(a), abs(b)):
+            return False
+    return compared > 0
+
+
+def enrich(exts: list[Ext], decisions: dict[str, Decision]) -> dict[str, dict]:
+    """Fill the NULL values of each day's accepted measurement from the day's rejected full
+    extractions (upload order, never overwriting a value). Returns {accepted id: merged values}
+    for the measurements that got something and records the fields in `Decision.enriched`."""
+    by_id = {e.id: e for e in exts}
+    merged: dict[str, dict] = {}
+    donors = sorted(
+        (
+            e
+            for e in exts
+            if decisions[e.id].reason == DAY_EXISTS and not e.deleted and not e.from_history
+        ),
+        key=lambda e: (e.upload_order, e.rank_in_day()),
+    )
+    for e in donors:
+        d = decisions[e.id]
+        winner = by_id.get(d.conflicting_id)
+        if winner is None or not decisions[winner.id].accepted:
+            continue
+        base = merged.get(winner.id, dict(winner.values))
+        if not _same_measurement(base, e.values):
+            continue
+        filled = [f for f in ENRICHABLE if base.get(f) is None and e.values.get(f) is not None]
+        if not filled:
+            continue
+        for f in filled:
+            base[f] = e.values[f]
+        merged[winner.id] = base
+        decisions[e.id] = Decision(False, d.reason, d.conflicting_id, tuple(filled))
+    return merged
+
+
 def rebuild_user(conn, user_id: str) -> tuple[list[Ext], dict[str, Decision]]:
     """Re-decide every extraction of the user and rewrite their LIVE `measurement` rows (deleted
     rows stay as they are, unless their extraction is accepted again: then they are revived)."""
     exts = load(conn, user_id)
     decisions = decide(exts)
+    merged = enrich(exts, decisions)
+    for e in exts:
+        if e.id in merged:  # the day's measurement with the values later files added
+            e.values = merged[e.id]
     for e in exts:
         d = decisions[e.id]
         conn.execute(
@@ -178,7 +264,8 @@ def is_partial(accepted: list[Ext]) -> bool:
 def outcome_status(exts_of_upload: list[Ext], decisions: dict[str, Decision]) -> str:
     accepted = [e for e in exts_of_upload if decisions[e.id].accepted]
     if not accepted:
-        return "nothing_new"
+        # a file that only completed an existing day is not "nothing new"
+        return "done" if any(decisions[e.id].enriched for e in exts_of_upload) else "nothing_new"
     return "partial" if is_partial(accepted) else "done"
 
 
@@ -224,6 +311,7 @@ def upload_report(
                 "errors": e.checks.get("errors", []),
                 "outcome": ACCEPTED if d.accepted else REJECTED,
                 "reason": d.reason,
+                "enriched": list(d.enriched),
                 "conflict": conflict,
             }
         )

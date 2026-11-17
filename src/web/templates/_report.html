@@ -42,6 +42,8 @@
       {% elif m.reason == "deleted" %}{{ t("reason.deleted") }}
       {% elif m.conflict %}{{ t("reason.day_exists") }}
         <a href="/uploads/{{ m.conflict.upload_id }}">{{ m.conflict.name }}</a> ({{ t("origin." ~ m.conflict.origin) }}, {{ m.conflict.date }})
+        {% if m.enriched %}<br>{{ t("reason.enriched") }}
+          {% for f in m.enriched %}{{ field_label(t, f) }}{% if not loop.last %}, {% endif %}{% endfor %}{% endif %}
       {% else %}{{ t("reason.day_exists") }}{% endif %}
       </p>
     {% endif %}

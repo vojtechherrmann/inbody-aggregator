@@ -64,8 +64,9 @@ def test_sheet_normalization_reproduces_the_canonical_golden(sheet):
 
 @needs_samples
 def test_four_samples_in_order_give_twelve_measurements():
-    """CSV, then the Gym C screenshot (its test day + all its history days are CSV days -> REJECTED,
-    nothing_new), then Gym A + Gym B (new days -> ACCEPTED). 10 + 1 + 1 = 12.
+    """CSV, then the Gym C screenshot (its test day + all its history days are CSV days -> REJECTED;
+    since 2026-11-17 the screenshot of the SAME measurement still ENRICHES the CSV day with the
+    values the CSV lacks), then Gym A + Gym B (new days -> ACCEPTED). 10 + 1 + 1 = 12.
     The sheets' 'model answers' are the golden wire files -- no API call."""
     import db
     import pipeline
@@ -88,7 +89,7 @@ def test_four_samples_in_order_give_twelve_measurements():
                 ).scalar()
             )
     assert statuses[CSV.name] in ("done", "partial"), statuses
-    assert statuses["sample_us_app.png"] == "nothing_new", statuses
+    assert statuses["sample_us_app.png"] == "done", statuses  # it completed the CSV day
     assert statuses["sample_sheet_a.jpg"] in ("done", "partial"), statuses
     assert statuses["sample_sheet_b.jpg"] in ("done", "partial"), statuses
 
@@ -97,6 +98,13 @@ def test_four_samples_in_order_give_twelve_measurements():
         m["outcome"] == "rejected" and m["reason"] == "day_exists" for m in us_app
     ), [(m["from_history"], m["outcome"], m["reason"]) for m in us_app]
     assert any(m["date"] == _day("sample_us_app") and not m["from_history"] for m in us_app)
+    test_day = next(
+        m for m in us_app if m["date"] == _day("sample_us_app") and not m["from_history"]
+    )
+    assert test_day["enriched"], "the screenshot should add the values the CSV does not have"
+    assert not any(
+        m["enriched"] for m in us_app if m is not test_day
+    )  # history points never enrich
     for name, day in (
         ("sample_sheet_a.jpg", _day("sample_sheet_a")),
         ("sample_sheet_b.jpg", _day("sample_sheet_b")),

@@ -16,8 +16,10 @@ Principles:
 - **One measurement per user per DAY. First come wins.** The time printed in a source is unreliable
   (the InBody app sometimes drops PM), so it is not used for matching. The measurement is stored
   as `measured_date` (DATE) + `measured_time` (TIME as printed, informational only), with **no
-  timezone**. If the user already has a measurement on that day, the new one is **REJECTED**:
-  no merge, no field-level enrichment, nothing overwritten.
+  timezone**. If the user already has a measurement on that day, the new one is **REJECTED**
+  and nothing is overwritten. **Enrichment (user decision 2026-11-17):** a rejected FULL extraction
+  that looks like the same measurement still fills the values the day's measurement is missing
+  (NULL), never replacing a value that is already there (section 3).
 
 ## 1. Admission (synchronous, before the user gets a response)
 
@@ -104,7 +106,10 @@ flowchart TD
     W1 --> X
 
     X([Each remaining extraction<br/>for user U, date D]) --> Q{Does U already have<br/>a measurement on day D?}
-    Q -- yes --> REJ[REJECTED<br/>day D already has a measurement<br/>from upload X, source Y<br/>nothing is merged or overwritten]
+    Q -- yes --> REJ[REJECTED<br/>day D already has a measurement<br/>from upload X, source Y<br/>nothing is overwritten]
+    REJ --> E{Full extraction that matches<br/>the same measurement?}
+    E -- yes --> ENR[ENRICH: fill only the values<br/>the day is missing, upload order]
+    E -- no --> E2[nothing is merged]
     Q -- no --> NEW[ACCEPTED: NEW measurement<br/>measured_date = D<br/>measured_time = as printed, no timezone]
 ```
 
@@ -115,8 +120,21 @@ flowchart TD
 - **Rebuild order:** `measurement` is rebuilt deterministically by replaying all extractions of the
   user in upload order (`upload.created_at`, then the rule above inside an upload). The same input
   therefore always gives the same result, and "first come wins" survives a `reprocess`.
-- Consequence: what arrives first for a day wins. Re-uploading a better source (e.g. a CSV after a
-  screenshot) does not replace that day. To replace one, the owner deletes that measurement (or its
+- **Enrichment** (changed 2026-11-17 at the owner's request; this is a deliberate change of the
+  earlier "no merge" rule): when a later upload's extraction is REJECTED `day_exists`, it is a full
+  extraction (not a history point), not deleted, and it **matches the day's measurement** -- at least
+  one of weight, skeletal muscle mass, body fat mass, total body water, percent body fat is printed
+  in both and every such pair agrees within 2 % -- then every value the day's measurement lacks
+  (NULL) is filled from it, in upload order. A value that is already there is never replaced.
+  Provenance, device, source name, printed time, `origin` and parser details stay those of the
+  first measurement. The extraction itself stays `accepted = false, day_exists`; its report item
+  lists the filled fields (`enriched`), and its upload status is `done` instead of `nothing_new`
+  when it added something. Enrichment is part of the deterministic replay: `reprocess` /
+  `rebuild-index` and any delete recompute it, so deleting the donor file removes what it added.
+  A file that does not match (another measurement on the same day) is not merged.
+- Consequence: what arrives first for a day wins (its values stay, only gaps are filled from later
+  files). Re-uploading a better source (e.g. a CSV after a screenshot) does not replace that day,
+  but it completes it. To replace one, the owner deletes that measurement (or its
   upload) and uploads again.
 - **Deleted extractions are skipped** (reason `deleted`): an extraction whose measurement the
   owner deleted (`extraction.deleted_at`, kept across a `reprocess`), or any extraction of a

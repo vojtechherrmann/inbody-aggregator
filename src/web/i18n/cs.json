@@ -149,6 +149,7 @@
  "progress.slow": "trvá to déle než obvykle…",
  "progress.store": "Ukládám data",
  "reason.day_exists": "Tento den už má měření, z",
+ "reason.enriched": "Tento den už měření měl; chybějící hodnoty se do něj doplnily z tohoto souboru:",
  "reason.deleted": "Smazáno.",
  "reason.same_day_in_file": "Stejný den je v souboru víckrát; ponecháno plné měření / nejdřívější čas.",
  "report.budget": "Přeskočeno: tvůj měsíční limit na AI je vyčerpaný.",

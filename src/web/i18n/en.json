@@ -149,6 +149,7 @@
  "progress.slow": "taking longer than usual…",
  "progress.store": "Storing raw data",
  "reason.day_exists": "This day already has a measurement, from",
+ "reason.enriched": "This day already had a measurement; the values it was missing were added to it from this file:",
  "reason.deleted": "Deleted.",
  "reason.same_day_in_file": "The same day appears more than once in this file; the full measurement / earliest time was kept.",
  "report.budget": "Skipped: your monthly AI limit is used up.",

@@ -43,7 +43,11 @@ def pdf(pages=1, tag=b"") -> bytes:
     return b"%PDF-1.4\n" + tag + body + b"trailer\n%%EOF\n"
 
 
-def csv_export(rows: list[tuple[str, float]], extra_header: str | None = None) -> bytes:
+def csv_export(
+    rows: list[tuple[str, float]],
+    extra_header: str | None = None,
+    extra: dict[str, str] | None = None,
+) -> bytes:
     """InBody-app-shaped CSV: all known headers, '-' = missing. rows = [(yyyymmddHHMMSS, lb)]."""
     from sheetpkg import validate
 
@@ -63,6 +67,7 @@ def csv_export(rows: list[tuple[str, float]], extra_header: str | None = None) -
                 "BMI(kg/m²)": "24.0",
             }
         )
+        vals.update(extra or {})  # e.g. {"InBody Score": "77"}
         lines.append(",".join(vals[h] for h in headers))
     return ("﻿" + "\n".join(lines) + "\n").encode("utf-8")
 

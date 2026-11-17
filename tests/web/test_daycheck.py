@@ -183,3 +183,74 @@ def test_two_rows_on_one_day_in_a_csv_go_to_review(stamps):
     upload_id = pipeline.admit("vojta", "x.csv", csv_export(stamps))
     assert pipeline.process_upload(upload_id) == "needs_review"
     assert _measurements() == []
+
+
+# ------------------------------------------------------------------------------ enrichment
+# User decision 2026-11-17 (changes docs/upload-pipeline.md section 3): a later upload for a day
+# that already has a measurement still fills the VALUES THE DAY IS MISSING (NULL) and never
+# overwrites a value.
+# Typical case: a sheet photo first (no InBody score), the CSV export later (has it).
+
+
+def _csv_with_score(stamp="20260624071000", weight_lb=176.4, score="77"):
+    upload_id = pipeline.admit(
+        "vojta", "s.csv", csv_export([(stamp, weight_lb)], extra={"InBody Score": score})
+    )
+    pipeline.process_upload(upload_id)
+    return upload_id
+
+
+def _sheet_same_day():
+    # matches the CSV above: 176.4 lb = 80.0 kg, SMM 79.4 lb = 36.0 kg, BFM 35.3 lb = 16.0 kg
+    return _sheet(wire(when="2026-06-24T07:10", weight=80.0, smm=36.0, bfm=16.0, pbf=20.0), "a.png")
+
+
+def test_a_later_upload_fills_the_missing_values_of_the_day_and_never_overwrites():
+    sheet_id = _sheet_same_day()
+    assert _measurements()[0].inbody_score is None
+    csv_id = _csv_with_score()
+    row = _measurements()[0]
+    assert len(_measurements()) == 1
+    assert row.inbody_score == 77  # filled from the CSV
+    assert row.weight_kg == 80.0 and row.origin == "sheet"  # the first one's values stay
+    assert row.id == _extractions(sheet_id)[0].id and row.upload_id == sheet_id
+    m = _report(csv_id)["measurements"][0]
+    assert m["outcome"] == "rejected" and m["reason"] == "day_exists"
+    assert "inbody_score" in m["enriched"] and "weight_kg" not in m["enriched"]
+    assert _status(csv_id) == "done"  # it did add something
+    assert "score" in _report(sheet_id)["measurements"][0]["filled"]  # the sheet's report is fuller
+
+
+def test_enrichment_survives_a_rebuild_and_is_undone_when_the_donor_is_deleted():
+    _sheet_same_day()
+    csv_id = _csv_with_score()
+    pipeline.reprocess(pipeline.select_uploads(all_=True), FakeClient())
+    assert _measurements()[0].inbody_score == 77  # deterministic replay
+    with db.engine().begin() as conn:
+        pipeline.delete_upload(conn, User("vojta", False), csv_id)
+    assert _measurements()[0].inbody_score is None  # nothing of the deleted file remains
+
+
+def test_a_file_that_does_not_look_like_the_same_measurement_is_not_merged():
+    _sheet_same_day()
+    # same day, but 190 lb = 86 kg: another measurement, not the same one
+    csv_id = _csv_with_score(weight_lb=190.0)
+    assert _measurements()[0].inbody_score is None
+    m = _report(csv_id)["measurements"][0]
+    assert m["outcome"] == "rejected" and not m.get("enriched")
+    assert _status(csv_id) == "nothing_new"
+
+
+def test_values_that_are_already_there_are_never_replaced_by_a_later_file():
+    _csv_with_score(score="77")
+    _csv_with_score(stamp="20260624091500", score="55")  # same day, another score
+    assert _measurements()[0].inbody_score == 77
+
+
+def test_the_upload_page_says_which_values_were_added_to_the_day(as_user):
+    _sheet_same_day()
+    csv_id = _csv_with_score()
+    page = as_user("vojta").get(f"/uploads/{csv_id}").text
+    assert "chybějící hodnoty se do něj doplnily" in page and "InBody skóre" in page
+    en = as_user("vojta").get(f"/uploads/{csv_id}", headers={"Accept-Language": "en"}).text
+    assert "the values it was missing were added to it" in en and "InBody score" in en
