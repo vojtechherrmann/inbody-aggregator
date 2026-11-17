@@ -483,3 +483,18 @@ def test_footer_has_a_mailto_name_and_a_homepage_link_and_the_landing_says_what_
     en = anon.get("/", headers={"Accept-Language": "en"}).text
     assert "follow them over time and share them with friends or trainers" in en
     assert config.CONTACT_EMAIL  # the tests run with a contact address
+
+
+def test_every_page_has_the_favicon_and_it_is_served_without_login(anon):
+    page = anon.get("/").text
+    assert '<link rel="icon" type="image/svg+xml" href="/static/favicon.svg' in page
+    resp = anon.get("/static/favicon.svg")
+    assert resp.status_code == 200 and resp.headers["content-type"].startswith("image/svg+xml")
+    assert "<svg" in resp.text and "<circle" in resp.text  # the little figure
+
+
+def test_the_database_waiting_page_has_the_favicon_too():
+    from pathlib import Path
+
+    src = (Path(__file__).resolve().parents[2] / "src/web/templates/dbwait.html").read_text()
+    assert 'rel="icon"' in src

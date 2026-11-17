@@ -7,6 +7,7 @@
   {# without JS the page still retries on its own #}
   <noscript><meta http-equiv="refresh" content="6"></noscript>
   <title>{{ t("db.starting_title") }} &middot; {{ t("app.name") }}</title>
+  <link rel="icon" type="image/svg+xml" href="{{ static_url('favicon.svg') }}">
   <link rel="stylesheet" href="{{ static_url('app.css') }}">
   <script src="{{ static_url('dbwait.js') }}" defer></script>
 </head>
