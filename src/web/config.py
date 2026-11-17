@@ -86,6 +86,9 @@ SESSION_SECRET = _env("SESSION_SECRET") or secrets.token_urlsafe(48)
 
 # ------------------------------------------------------------------------------------- sessions
 SESSION_COOKIE = "__Host-inbody_session"  # __Host-: Secure, Path=/, no Domain -- browser-enforced
+# The start page (vojtah.cz) reads /dbstatus before it opens this app, so a click on its InBody
+# card waits there instead of on our "Starting the database" page. CORS for exactly these origins.
+HOMEPAGE_ORIGINS = ("https://vojtah.cz",)
 CSRF_COOKIE = "__Host-inbody_csrf"
 LANG_COOKIE = "inbody_lang"
 QUOTE_COOKIE = (

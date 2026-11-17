@@ -512,11 +512,22 @@ def healthz():
 
 
 @public.get("/dbstatus")
-def dbstatus():
-    """Is the database awake? Polled by the waiting page. No database access (it must not block on
-    the paused database); asking also (re)starts the warm-up."""
+def dbstatus(request: Request):
+    """Is the database awake? Polled by the waiting page and by the InBody card on vojtah.cz. No
+    database access (it must not block on the paused database); asking also (re)starts the warm-up.
+    `session` = a session cookie came with the request (presence only, not checked: no database):
+    without one the front page needs no database, so the start page need not wait for it.
+    CORS (with credentials) only for config.HOMEPAGE_ORIGINS; the session cookie is SameSite=Strict
+    and vojtah.cz is the same site, so it comes along on that fetch."""
     dbwarm.ensure_warming()
-    return Response(json.dumps({"warm": dbwarm.is_warm()}), media_type="application/json")
+    body = {"warm": dbwarm.is_warm(), "session": bool(request.cookies.get(config.SESSION_COOKIE))}
+    response = Response(json.dumps(body), media_type="application/json")
+    origin = request.headers.get("origin")
+    if origin in config.HOMEPAGE_ORIGINS:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    response.headers["Vary"] = "Origin"
+    return response
 
 
 @public.get("/", response_class=HTMLResponse)

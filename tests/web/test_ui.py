@@ -438,7 +438,7 @@ def test_a_cold_database_shows_the_starting_page_then_the_real_page(as_user, ano
         and 'data-target="/history?subject=vojta"' in page.text
     )
     assert "/static/dbwait.js" in page.text and " style=" not in page.text
-    assert vojta.get("/dbstatus").json() == {"warm": False}
+    assert vojta.get("/dbstatus").json() == {"warm": False, "session": True}
     # anonymous pages need no database: shown at once; /healthz never waits either
     assert anon.get("/").status_code == 200 and anon.get("/login").status_code == 200
     assert anon.get("/healthz").status_code == 200
@@ -452,7 +452,7 @@ def test_a_cold_database_shows_the_starting_page_then_the_real_page(as_user, ano
         import time
 
         time.sleep(0.05)
-    assert vojta.get("/dbstatus").json() == {"warm": True}
+    assert vojta.get("/dbstatus").json() == {"warm": True, "session": True}
     assert vojta.get("/history").status_code == 200
 
 
@@ -469,7 +469,7 @@ def test_a_database_that_answers_quickly_is_never_noticed(as_user, monkeypatch):
 def test_sqlite_is_always_warm(anon):
     import dbwarm
 
-    assert dbwarm.is_warm() and anon.get("/dbstatus").json() == {"warm": True}
+    assert dbwarm.is_warm() and anon.get("/dbstatus").json() == {"warm": True, "session": False}
 
 
 def test_footer_has_a_mailto_name_and_a_homepage_link_and_the_landing_says_what_it_is_for(anon):
@@ -498,3 +498,13 @@ def test_the_database_waiting_page_has_the_favicon_too():
 
     src = (Path(__file__).resolve().parents[2] / "src/web/templates/dbwait.html").read_text()
     assert 'rel="icon"' in src
+
+
+def test_dbstatus_is_readable_by_the_start_page_only(anon):
+    ok = anon.get("/dbstatus", headers={"Origin": "https://vojtah.cz"})
+    assert ok.headers["access-control-allow-origin"] == "https://vojtah.cz"
+    assert ok.headers["access-control-allow-credentials"] == "true"
+    assert "Origin" in ok.headers["vary"]
+    other = anon.get("/dbstatus", headers={"Origin": "https://evil.example"})
+    assert "access-control-allow-origin" not in other.headers
+    assert "access-control-allow-origin" not in anon.get("/dbstatus").headers
