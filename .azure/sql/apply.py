@@ -9,8 +9,8 @@ before anything is sent.
     AZURE_CONFIG_DIR=/Users/vherrmann/.azure-personal uv run --with pyodbc \\
         python .azure/sql/apply.py .azure/sql/inbody_schema.sql
 
-The first statement after an auto-pause waits for the serverless DB to resume (~1 min); the
-connect timeout below covers that.
+The connect timeout below is generous: it dates from the serverless free-offer DB, which took
+~1 min to resume after an auto-pause (Basic since 2026-11-20 never pauses).
 """
 
 from __future__ import annotations

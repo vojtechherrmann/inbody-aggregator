@@ -1,6 +1,6 @@
 # Create `vhgwc-inbody-web` (src/web): the inbody-aggregator website -- one container app on the
 # Consumption plan, PUBLIC (no EasyAuth: the app has its own login), HTTPS only, scale 0..1 with a
-# 1 h scale-down cooldown. Max replicas = 1 is load-bearing: the in-memory rate limits and the
+# 10 min scale-down cooldown. Max replicas = 1 is load-bearing: the in-memory rate limits and the
 # single background worker assume exactly one process (AGENTS.md).
 #
 # Secrets (Container App secrets, the monorepo pattern -- no Key Vault), read from the gitignored
@@ -36,7 +36,7 @@ $container    = "inbody"
 $sqlServer    = "vhgwcsql1.database.windows.net"
 $sqlDatabase  = "vojtah"                       # shared database; this app owns schema `inbody` in it
 $contactEmail = "herrmann.vojtech@gmail.com"   # public on the landing page (approved 2026-11-16)
-$cooldownSec  = 3600                           # scale to zero after 1 h without traffic
+$cooldownSec  = 600                            # scale to zero after 10 min without traffic (bots hit the public host ~hourly)
 $repo         = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 
 $current = az account show --query name -o tsv
@@ -139,7 +139,7 @@ $mi         = az containerapp show -n $app -g $rg --query identity.principalId -
 $actualFqdn = az containerapp show -n $app -g $rg --query "properties.configuration.ingress.fqdn" -o tsv
 if ($actualFqdn -ne $fqdn) { throw "FQDN is $actualFqdn, expected $fqdn (PUBLIC_BASE_URL would be wrong)" }
 
-# HTTPS only (HTTP requests are redirected) + the 1 h scale-down cooldown -- the only follow-up
+# HTTPS only (HTTP requests are redirected) + the 10 min scale-down cooldown -- the only follow-up
 # write; it touches ingress + scale only, never the container env. `--cooldown-period` is
 # not an `az containerapp` flag, so PATCH the ARM resource (the monorepo's vhncus-web recipe).
 az rest --method patch `

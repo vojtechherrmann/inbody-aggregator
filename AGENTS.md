@@ -100,8 +100,8 @@ Root holds only README / AGENTS / CLAUDE / AZURE. No new `.md` files in the root
   current). A change to the LIVE database is a one-off, re-runnable ALTER script that is applied once
   and then deleted (the generated file already holds the final shape).
   A grant to an MI user is `DROP USER IF EXISTS` + `CREATE USER … WITH OBJECT_ID`, never an
-  `IF NOT EXISTS` guard. The database is `vojtah` (schema `inbody` = this app; schema `vojtah` = the site's web users, owned by the private `vojtah-internal` repo; renamed from `inbody`, see `AZURE.md`) and is on the **free offer** (serverless, auto-pauses): the first
-  query after a pause takes ~1 min — connect with retry.
+  `IF NOT EXISTS` guard. The database is `vojtah` (schema `inbody` = this app; schema `vojtah` = the site's web users, owned by the private `vojtah-internal` repo; renamed from `inbody`, see `AZURE.md`) and is on **Basic** (5 DTU, always on, since 2026-11-20; it was a
+  serverless free-offer DB that auto-paused) — keep connecting with retry anyway (failover, maintenance).
 
 ## App rules that are easy to break
 
@@ -168,7 +168,8 @@ Root holds only README / AGENTS / CLAUDE / AZURE. No new `.md` files in the root
   or an unknown value = dark), rendered as `<html data-theme="dark|light">`, no attribute for "system"
   (then `prefers-color-scheme` decides); app.css keeps the dark tokens twice (media query +
   `[data-theme="dark"]`), `tests/web/test_theme.py` keeps them equal.
-- **Cold database** (`src/web/dbwarm.py`): Azure SQL auto-pauses; a request arriving while nothing succeeded for
+- **Cold database** (`src/web/dbwarm.py`): kept from the serverless era (Basic does not auto-pause, but the
+  database can still be briefly unavailable); a request arriving while nothing succeeded for
   30 min starts a background `SELECT 1` warm-up and waits 1.5 s; if the DB is still down the visitor gets
   `dbwait.html` (503, amber "Starting the database" strip, polls `/dbstatus` and returns to the page).
   Anonymous `/`, `/login`, `/data`, `/healthz`, `/dbstatus` and static files never wait. SQLite is always warm.

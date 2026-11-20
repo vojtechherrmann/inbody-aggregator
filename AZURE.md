@@ -17,15 +17,15 @@ carry the project name.
 | Container Registry | `Microsoft.ContainerRegistry/registries` | `vhgwccr1` (Basic, admin on) | images (`vhgwccr1.azurecr.io/inbody-web`) | ~$5 |
 | Log Analytics Workspace | `Microsoft.OperationalInsights/workspaces` | `vhgwcworkspace` (30 d) | Container Apps logs | ~$0–0.20 (a few MB/month) |
 | Container Apps Environment | `Microsoft.App/managedEnvironments` | `vhgwccae` (Consumption) | runtime env | $0 |
-| Container App | `Microsoft.App/containerApps` | `vhgwc-inbody-web` | the website (`src/web`): public HTTPS-only ingress :8000, 0.5 CPU / 1 Gi, **scale 0–1, 1 h cooldown**, system MI; secrets `anthropic-api-key`, `session-secret`, `ntfy-topic`; `APP_ENV=production` | ~$1–4 (≈ $0.054 per active hour; every visit keeps it up ≥ 1 h; $0 idle) |
+| Container App | `Microsoft.App/containerApps` | `vhgwc-inbody-web` | the website (`src/web`): public HTTPS-only ingress :8000, 0.5 CPU / 1 Gi, **scale 0–1, 10 min cooldown**, system MI; secrets `anthropic-api-key`, `session-secret`, `ntfy-topic`; `APP_ENV=production` | ~$1–4 (≈ $0.054 per active hour; every visit keeps it up ≥ 10 min; $0 idle) |
 | Storage Account | `Microsoft.Storage/storageAccounts` | `vhgwcsa1` (StorageV2, LRS, Hot) | blob container `inbody` (MI: Storage Blob Data Contributor on that container only) | ~$0.10 |
 | Azure SQL Server | `Microsoft.Sql/servers` | `vhgwcsql1` | Entra-only auth; FQDN `vhgwcsql1.database.windows.net` | $0 |
-| Azure SQL Database | `Microsoft.Sql/servers/databases` | `vojtah` (schemas `inbody` = this app, `vojtah` = the site's web users; renamed from `inbody`, see `.azure/sql/rename-database.ps1`) | **free offer**: GP serverless Gen5 (2 vCore max), 100k vCore-s + 32 GB/month, `AutoPause` when exhausted; schema `inbody` (`001`), MI grant (`002`), tables (`003`, generated) | $0 |
+| Azure SQL Database | `Microsoft.Sql/servers/databases` | `vojtah` (schemas `inbody` = this app, `vojtah` = the site's web users; renamed from `inbody`, see `.azure/sql/rename-database.ps1`) | **Basic** (5 DTU, 2 GB, always on; was the free offer until 2026-11-20, see `.azure/sql/provision.ps1`); schema `inbody` (`001`), MI grant (`002`), tables (`003`, generated) | ~$4.90 |
 | Entra service principal | — | `gh-inbody-aggregator` | GitHub Actions deploy, Contributor on `vh-personal` only | $0 |
 
 | Claude API (not Azure) | — | `claude-opus-5-5` | sheet extraction (PDF/JPG/PNG); CSV costs nothing | ~$0.10–0.15 per sheet; **hard cap $50/month global**; per user $5/month base quota + optional extra-usage grants (`scripts/users.py grant-extra`); + $50 Console workspace limit |
 
-**Azure total ≈ $6–10 / month**, dominated by ACR Basic. Container Apps' monthly free grant (180k vCPU-s,
+**Azure total ≈ $11–15 / month**, dominated by ACR Basic and SQL Basic. Container Apps' monthly free grant (180k vCPU-s,
 360k GiB-s, 2M requests) is per subscription and is most likely already used up by the monorepo's
 fleet, so the app is priced at list rates above. The 5 GB/month Log Analytics free ingestion is per
 billing account (shared with the monorepo too).
@@ -40,12 +40,12 @@ export AZURE_CONFIG_DIR=/Users/vherrmann/.azure-personal GH_CONFIG_DIR=/Users/vh
 pwsh .azure/basics/basics.ps1                 # RG vh-personal + ACR vhgwccr1
 pwsh .azure/basics/gwc.ps1                    # vhgwcworkspace + vhgwccae
 pwsh .azure/blob/provision.ps1                # vhgwcsa1 + container inbody
-pwsh .azure/sql/provision.ps1                 # vhgwcsql1 + free DB vojtah + firewall
+pwsh .azure/sql/provision.ps1                 # vhgwcsql1 + DB vojtah (Basic) + firewall
 uv run --with pyodbc python .azure/sql/apply.py .azure/sql/inbody_schema.sql
 uv run --with pyodbc python .azure/sql/apply.py .azure/sql/inbody_tables.sql
 az acr build --registry vhgwccr1 --image inbody-web:latest --file src/web/Dockerfile .   # first image (ACR Tasks, ~2–4 min)
 # needs .apikeys/anthropic.env (ANTHROPIC_API_KEY=...); optional .apikeys/ntfy.env (INBODY_NTFY_TOPIC=...)
-pwsh .azure/services/web.ps1                  # vhgwc-inbody-web (secrets, HTTPS only, 1 h cooldown) + blob RBAC; prints the MI GUID
+pwsh .azure/services/web.ps1                  # vhgwc-inbody-web (secrets, HTTPS only, 10 min cooldown) + blob RBAC; prints the MI GUID
 uv run --with pyodbc python .azure/sql/apply.py .azure/sql/inbody_grant_web.sql --var WEB_MI_OBJECT_ID=<MI GUID from web.ps1>
 SQL_BACKEND=azure .venv/bin/python scripts/users.py add vojta            # passwords -> .apikeys/inbody-users.env (0600), never printed
 SQL_BACKEND=azure .venv/bin/python scripts/users.py add vojta-admin --admin
@@ -103,8 +103,9 @@ The registrar domain `vojtah.cz` has **no hosting** (DNS only). The apex serves 
   serverless `GP_S_Gen5_*` `Available`; **swedencentral** `Available`; **westeurope** and
   **northeurope** `Visible` = not offered to this subscription (like NC US / East US in the
   monorepo). ServerQuota 0/250 everywhere.
-- Free offer: the subscription's only SQL server (`vhncussql1`: `data` S0, `trading` S1) has
-  `useFreeLimit = null` on every database → the one free database per subscription is unused.
+- Free offer (historical): `vojtah` used it 2026-11-16 → 2026-11-20 and burned 90 % of the month's
+  100k vCore-seconds in 4 days because scanner traffic on the public host woke it hourly; it is
+  Basic now (`.azure/sql/provision.ps1`).
 
 ## Auth & conventions
 
