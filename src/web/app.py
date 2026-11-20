@@ -206,8 +206,8 @@ def _db_wait_page(request: Request) -> Response:
 
 @app.middleware("http")
 async def db_gate(request: Request, call_next):
-    """While the (auto-paused) database is cold, answer with the waiting page instead of letting
-    the browser hang for a minute; see dbwarm.py. Inside `frame`: security headers still apply."""
+    """While the database is cold (not queried for a while), answer with the waiting page instead
+    of letting the browser hang; see dbwarm.py. Inside `frame`: security headers still apply."""
     path = request.url.path
     if not dbwarm.enabled() or path.startswith("/static/") or path in DB_GATE_EXEMPT:
         return await call_next(request)
@@ -506,8 +506,8 @@ async def _not_found(request: Request, _exc: data.NotFound):
 
 @app.exception_handler(DBAPIError)
 async def _database_unreachable(request: Request, exc: DBAPIError):
-    """The database dropped away DURING a request although `db_gate` let it through as warm (an
-    auto-pause / resume the process did not see: a reset connection, a login timeout). That is the
+    """The database dropped away DURING a request although `db_gate` let it through as warm (it went
+    away while the process was not looking: a reset connection, a login timeout). That is the
     cold-database case, not a bug: mark it cold, start the warm-up and show the same "Starting the
     database" page, which returns to the page by itself. Any other database error stays a 500."""
     unreachable = isinstance(exc, (OperationalError, InterfaceError)) or exc.connection_invalidated

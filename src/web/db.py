@@ -332,7 +332,7 @@ def _azure_engine() -> Engine:
     conn_str = (
         "Driver={ODBC Driver 18 for SQL Server};"
         f"Server=tcp:{config.SQL_SERVER},1433;Database={config.SQL_DATABASE};"
-        # 120 s: the free-offer serverless DB auto-pauses; the first connect waits for resume.
+        # Long on purpose: the first connect to a cold database can be slow (see dbwarm.py).
         "Encrypt=yes;TrustServerCertificate=no;Connection Timeout=120"
     )
 
@@ -342,7 +342,7 @@ def _azure_engine() -> Engine:
         packed = struct.pack("<i", len(raw)) + raw
         return pyodbc.connect(conn_str, attrs_before={_SQL_COPT_SS_ACCESS_TOKEN: packed})
 
-    # pool_recycle < token lifetime; pre_ping survives an auto-pause between requests.
+    # pool_recycle < token lifetime; pre_ping drops connections the server closed while idle.
     return create_engine("mssql+pyodbc://", creator=connect, pool_pre_ping=True, pool_recycle=1800)
 
 

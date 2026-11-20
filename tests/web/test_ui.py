@@ -511,7 +511,7 @@ def test_dbstatus_is_readable_by_the_start_page_only(anon):
 def test_a_database_that_drops_away_mid_request_shows_the_starting_page_not_a_500(
     as_user, monkeypatch
 ):
-    """db_gate thought the database was warm, but the query hit a paused / just-resumed database
+    """db_gate thought the database was warm, but the query hit a cold / just-recovered database
     (2026-11-17: TCP reset, then a login timeout -> Internal Server Error on POST /login)."""
     import data
     import dbwarm
