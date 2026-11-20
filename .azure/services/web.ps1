@@ -113,7 +113,9 @@ if ($ntfyTopic) {
     Write-Host "No .apikeys/ntfy.env -> pushes to Vojta are OFF (add the secret later, see AZURE.md)."
 }
 
-# 0.5 CPU / 1 Gi: Claude answers + base64 of a 10 MB PDF + the ODBC driver; 0.25/0.5 is too tight.
+# 0.25 CPU / 0.5 Gi (since 2026-11-20; was 0.5 / 1 Gi on a pre-launch guess): measured over 7 days the
+# working set peaked at 297 MiB and CPU at 95 m. A 10 MB PDF upload (base64 + JSON body) is the
+# memory worst case, estimated 350-400 MiB; an OOM is exit 137 and the upload is re-queued on restart.
 az containerapp create `
     --name $app `
     --resource-group $rg `
@@ -125,7 +127,7 @@ az containerapp create `
     --system-assigned `
     --ingress external --target-port 8000 --transport auto `
     --min-replicas 0 --max-replicas 1 `
-    --cpu 0.5 --memory 1Gi `
+    --cpu 0.25 --memory 0.5Gi `
     --secrets $secrets `
     --env-vars $envVars
 
@@ -156,7 +158,7 @@ az role assignment create --assignee-object-id $mi --assignee-principal-type Ser
     --scope "/subscriptions/$sub/resourceGroups/$rg/providers/Microsoft.Storage/storageAccounts/$sa/blobServices/default/containers/$container"
 if ($LASTEXITCODE -ne 0) { throw "blob role assignment failed (exit $LASTEXITCODE)" }
 
-Write-Host "$app created (public HTTPS ingress, target 8000, scale 0..1, cooldown $cooldownSec s, 0.5 CPU/1 Gi)."
+Write-Host "$app created (public HTTPS ingress, target 8000, scale 0..1, cooldown $cooldownSec s, 0.25 CPU/0.5 Gi)."
 Write-Host "URL: https://$fqdn"
 Write-Host ""
 Write-Host "NEXT:"
